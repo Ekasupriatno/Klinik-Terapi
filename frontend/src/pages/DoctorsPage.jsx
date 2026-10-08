@@ -178,9 +178,11 @@ export const DoctorsPage = () => {
                 {/* Doctor Avatar */}
                 <div className="relative">
                   <img
-                    src={doctor.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&auto=format&fit=crop&q=80'}
+                    src={doctor.image_thumbnail_url || doctor.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300&auto=format&fit=crop&q=80'}
                     alt={doctor.name}
                     className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-slate-100 flex-shrink-0 shadow-sm group-hover:border-brand-200 transition"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white shadow-lg">
                     <Heart className="w-4 h-4" />

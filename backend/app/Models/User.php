@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,6 +19,8 @@ class User extends Authenticatable
         'phone',
         'password',
         'role',
+        'status',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -35,7 +38,12 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['super_admin', 'admin', 'receptionist']);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
     }
 
     public function isDoctor(): bool
@@ -43,9 +51,24 @@ class User extends Authenticatable
         return $this->role === 'doctor';
     }
 
+    public function isTherapist(): bool
+    {
+        return in_array($this->role, ['therapist', 'doctor']);
+    }
+
+    public function isParent(): bool
+    {
+        return $this->role === 'parent';
+    }
+
     public function isPatient(): bool
     {
-        return $this->role === 'patient';
+        return in_array($this->role, ['patient', 'parent']);
+    }
+
+    public function doctor(): HasOne
+    {
+        return $this->hasOne(Doctor::class);
     }
 
     public function bookings(): HasMany
@@ -56,5 +79,20 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function guardian(): HasOne
+    {
+        return $this->hasOne(Guardian::class);
+    }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class, 'author_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
     }
 }

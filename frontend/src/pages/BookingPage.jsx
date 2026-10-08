@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { doctorService, bookingService } from '../services/api';
+import { doctorService, bookingService, serviceService, parentService, clinicSettingService } from '../services/api';
 import { SlotGridSkeleton } from '../components/common/Skeleton';
 import {
   Calendar,
@@ -14,24 +14,40 @@ import {
   ArrowLeft,
   PhoneCall,
   Sparkles,
-  Check
+  Check,
+  Baby,
+  Tag,
+  Plus,
+  HeartHandshake
 } from 'lucide-react';
 
 export const BookingPage = () => {
   const { user, isAuthenticated } = useAuth();
+  const [clinicWhatsapp, setClinicWhatsapp] = useState('6282235123063');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Wizard Steps: 1 = Pilih Dokter, 2 = Jadwal & Slot, 3 = Keluhan Pasien, 4 = Konfirmasi
+  // Stepper Steps:
+  // 1 = Pilih Anak, 2 = Pilih Layanan, 3 = Pilih Dokter, 4 = Tanggal & Slot, 5 = Keluhan & No Telp, 6 = Konfirmasi
   const [step, setStep] = useState(1);
 
-  // Form State
+  // Data Lists
+  const [childrenList, setChildrenList] = useState([]);
+  const [servicesList, setServicesList] = useState([]);
   const [doctors, setDoctors] = useState([]);
+
+  // Selections
+  const [selectedChildId, setSelectedChildId] = useState('');
+  const [selectedChild, setSelectedChild] = useState(null);
+  const [guestChildName, setGuestChildName] = useState('');
+
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedService, setSelectedService] = useState(null);
+
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  
+
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Default hari ini format YYYY-MM-DD
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
@@ -41,38 +57,102 @@ export const BookingPage = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   const [complaint, setComplaint] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successBooking, setSuccessBooking] = useState(null);
 
-  // Ambil data dokter saat pertama kali mount
+  // Quick Inline Add Child
+  const [showAddChildInline, setShowAddChildInline] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
+  const [newChildBirthDate, setNewChildBirthDate] = useState('');
+  const [newChildGender, setNewChildGender] = useState('male');
+  const [savingNewChild, setSavingNewChild] = useState(false);
+
+  // 1. Initial Data Fetching
   useEffect(() => {
-    const loadDoctors = async () => {
+    const loadInitialData = async () => {
       try {
-        const res = await doctorService.getAll();
-        if (res.data?.data) {
-          setDoctors(res.data.data);
-          
-          // Cek apakah ada query param ?doctor_id=
-          const docIdParam = searchParams.get('doctor_id');
-          if (docIdParam) {
-            const found = res.data.data.find(d => d.id.toString() === docIdParam);
-            if (found) {
-              setSelectedDoctorId(docIdParam);
-              setSelectedDoctor(found);
-              setStep(2); // langsung lompat ke langkah 2
-            }
+        const [servicesRes, doctorsRes] = await Promise.all([
+          serviceService.getAll({ is_active: true }),
+          doctorService.getAll(),
+        ]);
+
+        const srvs = servicesRes.data?.data || servicesRes.data || [];
+        const docs = doctorsRes.data?.data || doctorsRes.data || [];
+
+        setServicesList(Array.isArray(srvs) ? srvs : []);
+        setDoctors(Array.isArray(docs) ? docs : []);
+
+        // Pre-select service from URL param
+        const serviceIdParam = searchParams.get('service_id');
+        if (serviceIdParam && Array.isArray(srvs)) {
+          const foundSrv = srvs.find((s) => s.id.toString() === serviceIdParam);
+          if (foundSrv) {
+            setSelectedServiceId(serviceIdParam);
+            setSelectedService(foundSrv);
+          }
+        }
+
+        // Pre-select doctor from URL param
+        const docIdParam = searchParams.get('doctor_id');
+        if (docIdParam && Array.isArray(docs)) {
+          const foundDoc = docs.find((d) => d.id.toString() === docIdParam);
+          if (foundDoc) {
+            setSelectedDoctorId(docIdParam);
+            setSelectedDoctor(foundDoc);
           }
         }
       } catch (err) {
-        console.error('Gagal mengambil daftar dokter:', err);
+        console.error('Failed to load services or doctors:', err);
+      }
+
+      try {
+        const settingsRes = await clinicSettingService.getPublicSettings();
+        if (settingsRes.data?.data?.whatsapp) {
+          setClinicWhatsapp(settingsRes.data.data.whatsapp.replace(/[^0-9]/g, ''));
+        }
+      } catch (err) {
+        console.error('Failed to load clinic settings:', err);
       }
     };
 
-    loadDoctors();
+    loadInitialData();
   }, [searchParams]);
 
-  // Saat dokter atau tanggal berubah, muat slot waktu tersedia
+  // Load children if user is logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadChildren = async () => {
+        try {
+          const res = await parentService.getChildren();
+          const list = res.data?.data || res.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setChildrenList(list);
+
+            const childIdParam = searchParams.get('child_id');
+            if (childIdParam) {
+              const foundChild = list.find((c) => c.id.toString() === childIdParam);
+              if (foundChild) {
+                setSelectedChildId(childIdParam);
+                setSelectedChild(foundChild);
+              }
+            } else if (!selectedChildId && list.length === 1) {
+              // Auto select if only 1 child
+              setSelectedChildId(list[0].id.toString());
+              setSelectedChild(list[0]);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load parent children:', err);
+        }
+      };
+
+      loadChildren();
+    }
+  }, [isAuthenticated, searchParams]);
+
+  // Load slots when doctor or date changes
   useEffect(() => {
     if (selectedDoctorId && selectedDate) {
       loadSlots();
@@ -96,15 +176,35 @@ export const BookingPage = () => {
     }
   };
 
-  const handleSelectDoctor = (doctor) => {
-    setSelectedDoctorId(doctor.id.toString());
-    setSelectedDoctor(doctor);
-    setStep(2);
-  };
-
   const handleSelectSlot = (slot) => {
     if (!slot.is_available) return;
     setSelectedSlot(slot);
+  };
+
+  // Quick save new child
+  const handleCreateChildInline = async (e) => {
+    e.preventDefault();
+    if (!newChildName.trim() || !newChildBirthDate) return;
+
+    setSavingNewChild(true);
+    try {
+      const res = await parentService.createChild({
+        name: newChildName,
+        birth_date: newChildBirthDate,
+        gender: newChildGender,
+      });
+      const created = res.data?.data || res.data;
+      setChildrenList((prev) => [...prev, created]);
+      setSelectedChildId(created.id.toString());
+      setSelectedChild(created);
+      setShowAddChildInline(false);
+      setNewChildName('');
+      setNewChildBirthDate('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal menambahkan data anak.');
+    } finally {
+      setSavingNewChild(false);
+    }
   };
 
   const handleSubmitBooking = async () => {
@@ -113,8 +213,20 @@ export const BookingPage = () => {
       return;
     }
 
-    if (!selectedSlot || !selectedDoctor || !complaint.trim()) {
-      setErrorMsg('Mohon lengkapi seluruh informasi booking.');
+    if (!selectedSlot || !selectedDoctor || !complaint.trim() || !phone.trim()) {
+      setErrorMsg('Mohon lengkapi seluruh informasi booking yang diperlukan.');
+      return;
+    }
+
+    // For authenticated users, child_id is required
+    if (isAuthenticated && !selectedChildId) {
+      setErrorMsg('Mohon pilih anak terlebih dahulu.');
+      return;
+    }
+
+    // Service is now required based on PRD
+    if (!selectedServiceId) {
+      setErrorMsg('Mohon pilih layanan terapi terlebih dahulu.');
       return;
     }
 
@@ -124,65 +236,110 @@ export const BookingPage = () => {
     try {
       const payload = {
         doctor_id: parseInt(selectedDoctor.id),
+        service_id: parseInt(selectedServiceId),
+        child_id: selectedChildId ? parseInt(selectedChildId) : null,
         schedule_id: selectedSlot.schedule_id ? parseInt(selectedSlot.schedule_id) : null,
         appointment_date: selectedDate,
         appointment_time: selectedSlot.start_time,
         patient_complaint: complaint,
+        phone: phone,
       };
 
-      console.log('Booking payload:', payload);
       const res = await bookingService.create(payload);
-      console.log('Booking response:', res);
       if (res.data?.data) {
         setSuccessBooking(res.data.data);
       }
     } catch (err) {
       console.error('Booking error:', err);
-      console.error('Error response:', err.response?.data);
-      const msg = err.response?.data?.message || err.response?.data?.errors?.appointment_time?.[0] || 'Terjadi kendala saat memproses booking Anda.';
-      setErrorMsg(msg);
+      setErrorMsg(formatBookingError(err));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const formatBookingError = (err) => {
+    const fieldErrors = err.response?.data?.errors;
+    if (fieldErrors && typeof fieldErrors === 'object') {
+      const messages = Object.values(fieldErrors)
+        .flat()
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean);
+      if (messages.length > 0) {
+        return [...new Set(messages)].join('\n');
+      }
+    }
+
+    const summary = err.response?.data?.message;
+    if (typeof summary === 'string' && summary.trim()) {
+      return summary.replace(/\s*\(and \d+ more errors?\)\s*$/i, '').trim();
+    }
+
+    return 'Terjadi kendala saat memproses booking Anda.';
+  };
+
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(val || 0);
+  };
+
   const getMinDate = () => {
-    return new Date().toISOString().split('T')[0];
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  const getMaxDate = () => {
+    const max = new Date();
+    max.setDate(max.getDate() + 30);
+    return max.toISOString().split('T')[0];
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-8">
-      
-      {/* Title & Wizard Header */}
-      <div className="text-center space-y-3">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-bold border border-brand-100">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Page Title */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5" />
-          Sistem Reservasi Appointment Digital
-        </span>
+          Reservasi Terapi Terpadu
+        </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Reservasi Jadwal Konsultasi Dokter
+          Pemesanan Jadwal Sesi Terapi
         </h1>
         <p className="text-slate-500 text-sm max-w-xl mx-auto">
-          Pilih dokter spesialis, tentukan tanggal & jam praktek yang sesuai, dan dapatkan konfirmasi jadwal pasti.
+          Pilih data anak, layanan terapi, terapis ahli, dan slot waktu yang nyaman untuk buah hati Anda.
         </p>
       </div>
 
-      {/* Stepper Wizard Indicator */}
+      {/* Stepper Progress */}
       {!successBooking && (
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
-          <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold">
-            <div className={`p-2.5 rounded-2xl transition ${step >= 1 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'text-slate-400'}`}>
-              1. Pilih Dokter
-            </div>
-            <div className={`p-2.5 rounded-2xl transition ${step >= 2 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'text-slate-400'}`}>
-              2. Tanggal & Slot
-            </div>
-            <div className={`p-2.5 rounded-2xl transition ${step >= 3 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'text-slate-400'}`}>
-              3. Keluhan Pasien
-            </div>
-            <div className={`p-2.5 rounded-2xl transition ${step >= 4 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'text-slate-400'}`}>
-              4. Konfirmasi
-            </div>
+        <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto scrollbar-none">
+          <div className="flex items-center justify-between min-w-[580px] text-xs font-bold gap-1">
+            {[
+              { num: 1, label: '1. Pasien Anak' },
+              { num: 2, label: '2. Layanan Terapi' },
+              { num: 3, label: '3. Dokter/Terapis' },
+              { num: 4, label: '4. Tanggal & Slot' },
+              { num: 5, label: '5. Keluhan & Kontak' },
+              { num: 6, label: '6. Konfirmasi' },
+            ].map((st) => (
+              <div
+                key={st.num}
+                onClick={() => {
+                  if (st.num < step) setStep(st.num);
+                }}
+                className={`py-2 px-3 rounded-xl transition text-center whitespace-nowrap cursor-pointer ${
+                  step === st.num
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : step > st.num
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'text-slate-400'
+                }`}
+              >
+                {st.label}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -193,7 +350,11 @@ export const BookingPage = () => {
           <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">Gagal Menyimpan Booking</p>
-            <p className="text-xs mt-0.5 text-rose-700">{errorMsg}</p>
+            <div className="text-xs mt-0.5 text-rose-700 space-y-1">
+              {errorMsg.split('\n').map((line, index) => (
+                <p key={index}>{line}</p>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -202,7 +363,7 @@ export const BookingPage = () => {
       {/* SUCCESS SCREEN                                    */}
       {/* ================================================= */}
       {successBooking ? (
-        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-card text-center space-y-6 animate-scale-up">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-xl text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center border border-emerald-200">
             <Check className="w-8 h-8 stroke-[3]" />
           </div>
@@ -220,27 +381,47 @@ export const BookingPage = () => {
           </div>
 
           <div className="max-w-md mx-auto bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3 text-xs sm:text-sm">
+            {successBooking.child && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Pasien Anak:</span>
+                <span className="font-bold text-slate-800">{successBooking.child?.name}</span>
+              </div>
+            )}
+            {successBooking.service && (
+              <div className="flex justify-between">
+                <span className="text-slate-500">Layanan Terapi:</span>
+                <span className="font-bold text-slate-800">{successBooking.service?.name}</span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className="text-slate-500">Dokter Terapi:</span>
+              <span className="text-slate-500">Terapis:</span>
               <span className="font-bold text-slate-800">{successBooking.doctor?.name}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Tanggal:</span>
-              <span className="font-bold text-slate-800">{successBooking.formatted_date || successBooking.appointment_date}</span>
+              <span className="font-bold text-slate-800">
+                {successBooking.formatted_date || successBooking.appointment_date}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Waktu Konsultasi:</span>
+              <span className="text-slate-500">Waktu:</span>
               <span className="font-bold text-slate-800">{successBooking.time_range} WIB</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Status Awal:</span>
-              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Menunggu Konfirmasi</span>
+              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                Menunggu Konfirmasi
+              </span>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <a
-              href={`https://wa.me/6281234567890?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20telah%20membuat%20booking%20dengan%20kode%20${encodeURIComponent(successBooking.booking_code)}%20untuk%20dokter%20${encodeURIComponent(successBooking.doctor?.name || '')}.%20Mohon%20konfirmasinya.`}
+              href={`https://wa.me/${clinicWhatsapp}?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20telah%20membuat%20booking%20dengan%20kode%20${encodeURIComponent(
+                successBooking.booking_code
+              )}%20untuk%20dokter%20${encodeURIComponent(
+                successBooking.doctor?.name || ''
+              )}.%20Mohon%20konfirmasinya.`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition"
@@ -251,139 +432,426 @@ export const BookingPage = () => {
 
             <button
               onClick={() => navigate('/my-bookings')}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition"
             >
-              Lihat Daftar Booking Saya
+              Lihat Riwayat Booking Saya
             </button>
           </div>
         </div>
       ) : (
-        /* ================================================= */
-        /* WIZARD CONTENT                                    */
-        /* ================================================= */
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-card">
-          
-          {/* STEP 1: PILIH DOKTER */}
+        <div className="space-y-6">
+          {/* ================================================= */}
+          {/* STEP 1: SELECT CHILD                              */}
+          {/* ================================================= */}
           {step === 1 && (
-            <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <h2 className="text-lg font-bold text-slate-800">Langkah 1: Pilih Dokter Spesialis</h2>
-                <p className="text-xs text-slate-500">Pilih tenaga medis yang sesuai dengan keluhan Anda</p>
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                    <Baby className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Langkah 1: Pilih Pasien Buah Hati</h3>
+                    <p className="text-xs text-slate-500">
+                      Tentukan anak yang akan mengikuti sesi konsultasi atau terapi.
+                    </p>
+                  </div>
+                </div>
+
+                {isAuthenticated && !showAddChildInline && (
+                  <button
+                    onClick={() => setShowAddChildInline(true)}
+                    className="py-2 px-3 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs hover:bg-brand-100 transition flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Tambah Anak Baru
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {doctors.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    onClick={() => handleSelectDoctor(doctor)}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer flex gap-4 items-start ${
-                      selectedDoctorId === doctor.id.toString()
-                        ? 'border-brand-600 bg-brand-50/50 shadow-sm ring-2 ring-brand-500/20'
-                        : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50/70'
-                    }`}
-                  >
-                    <img
-                      src={doctor.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&auto=format&fit=crop&q=80'}
-                      alt={doctor.name}
-                      className="w-16 h-16 rounded-xl object-cover border border-slate-100 flex-shrink-0"
-                    />
-                    <div className="space-y-1 flex-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-100">
-                        {doctor.specialization?.name}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-900">{doctor.name}</h4>
-                      <p className="text-xs text-slate-500">{doctor.title}</p>
-                      <p className="text-xs font-extrabold text-brand-700 pt-1">
-                        {doctor.formatted_fee || `Rp ${Number(doctor.consultation_fee).toLocaleString('id-ID')}`}
-                      </p>
+              {/* Inline Add Child Form */}
+              {showAddChildInline && (
+                <form
+                  onSubmit={handleCreateChildInline}
+                  className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <h4 className="font-bold text-slate-800 text-sm">Daftarkan Anak Baru Cepat</h4>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddChildInline(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+                    >
+                      Batal
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">
+                        Nama Lengkap *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nama Anak"
+                        value={newChildName}
+                        onChange={(e) => setNewChildName(e.target.value)}
+                        className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">
+                        Tanggal Lahir *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newChildBirthDate}
+                        onChange={(e) => setNewChildBirthDate(e.target.value)}
+                        className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">
+                        Jenis Kelamin
+                      </label>
+                      <select
+                        value={newChildGender}
+                        onChange={(e) => setNewChildGender(e.target.value)}
+                        className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
+                      >
+                        <option value="male">Laki-laki</option>
+                        <option value="female">Perempuan</option>
+                      </select>
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      disabled={savingNewChild}
+                      className="py-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs"
+                    >
+                      {savingNewChild ? 'Menyimpan...' : 'Simpan & Pilih Anak'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Children List */}
+              {isAuthenticated ? (
+                childrenList.length === 0 && !showAddChildInline ? (
+                  <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <Baby className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs sm:text-sm text-slate-600 font-semibold">
+                      Anda belum mendaftarkan profil anak.
+                    </p>
+                    <button
+                      onClick={() => setShowAddChildInline(true)}
+                      className="mt-3 py-2 px-4 rounded-xl bg-brand-600 text-white text-xs font-bold"
+                    >
+                      + Tambahkan Profil Anak
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {childrenList.map((ch) => {
+                      const isSelected = selectedChildId === ch.id.toString();
+                      return (
+                        <div
+                          key={ch.id}
+                          onClick={() => {
+                            setSelectedChildId(ch.id.toString());
+                            setSelectedChild(ch);
+                          }}
+                          className={`p-4 rounded-2xl border cursor-pointer transition flex items-center justify-between ${
+                            isSelected
+                              ? 'border-brand-600 bg-brand-50/70 shadow-sm ring-2 ring-brand-500/20'
+                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                              ch.gender === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {ch.name.charAt(0)}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-sm leading-tight">
+                                {ch.name}
+                              </h4>
+                              <span className="text-xs text-slate-500">
+                                {ch.gender === 'female' ? '👧 Perempuan' : '👦 Laki-laki'}
+                              </span>
+                            </div>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-5 h-5 text-brand-600" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
+                  <div className="text-xs font-bold text-amber-900">
+                    💡 Booking Sebagai Tamu atau Pasien Mandiri
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Nama Pasien Anak / Pendaftar:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Masukkan nama anak..."
+                      value={guestChildName}
+                      onChange={(e) => setGuestChildName(e.target.value)}
+                      className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
+                    />
+                  </div>
+                  <p className="text-[11px] text-amber-800">
+                    Atau masuk / daftar akun orang tua untuk mengaitkan rekam medis anak Anda secara permanen.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => setStep(2)}
+                  className="py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition flex items-center gap-2 shadow-sm"
+                >
+                  <span>Lanjut: Pilih Layanan</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: TANGGAL & SLOT WAKTU */}
+          {/* ================================================= */}
+          {/* STEP 2: SELECT SERVICE                            */}
+          {/* ================================================= */}
           {step === 2 && (
-            <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800">Langkah 2: Pilih Tanggal & Waktu Praktek</h2>
-                  <p className="text-xs text-slate-500">
-                    Dokter: <strong className="text-slate-800">{selectedDoctor?.name}</strong> ({selectedDoctor?.specialization?.name})
-                  </p>
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                    <Tag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Langkah 2: Pilih Layanan Terapi</h3>
+                    <p className="text-xs text-slate-500">
+                      Pilih jenis program atau terapi yang dibutuhkan buah hati.
+                    </p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setStep(1)}
-                  className="text-xs font-bold text-brand-600 hover:underline"
-                >
-                  Ganti Dokter
-                </button>
               </div>
 
-              {/* Date Input */}
-              <div className="space-y-2 max-w-sm">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-brand-600" />
-                  Pilih Tanggal Kedatangan:
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {servicesList.map((srv) => {
+                  const isSelected = selectedServiceId === srv.id.toString();
+                  return (
+                    <div
+                      key={srv.id}
+                      onClick={() => {
+                        setSelectedServiceId(srv.id.toString());
+                        setSelectedService(srv);
+                      }}
+                      className={`p-5 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-brand-600 bg-brand-50/70 shadow-sm ring-2 ring-brand-500/20'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-100 text-brand-800">
+                            {srv.specialization?.name || 'Terapi Spesialis'}
+                          </span>
+                          {isSelected && <CheckCircle2 className="w-5 h-5 text-brand-600" />}
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-base">{srv.name}</h4>
+                        <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                          {srv.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 flex items-center gap-1 font-medium">
+                          <Clock className="w-3.5 h-3.5 text-brand-500" />
+                          {srv.duration_minutes || 45} Menit
+                        </span>
+                        {srv.show_price !== false && (
+                          <span className="font-extrabold text-brand-700">
+                            {formatCurrency(srv.price)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => setStep(1)}
+                  className="py-3 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Kembali
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  className="py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition flex items-center gap-2 shadow-sm"
+                >
+                  <span>Lanjut: Pilih Dokter/Terapis</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================= */}
+          {/* STEP 3: SELECT DOCTOR                             */}
+          {/* ================================================= */}
+          {step === 3 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Langkah 3: Pilih Dokter / Terapis</h3>
+                  <p className="text-xs text-slate-500">
+                    Pilih terapis terpercaya yang akan mendampingi sesi terapi buah hati.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {doctors.map((doc) => {
+                  const isSelected = selectedDoctorId === doc.id.toString();
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => {
+                        setSelectedDoctorId(doc.id.toString());
+                        setSelectedDoctor(doc);
+                      }}
+                      className={`p-5 rounded-2xl border cursor-pointer transition flex items-center justify-between gap-4 ${
+                        isSelected
+                          ? 'border-brand-600 bg-brand-50/70 shadow-sm ring-2 ring-brand-500/20'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={doc.image_thumbnail_url || doc.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150'}
+                          alt={doc.name}
+                          className="w-14 h-14 rounded-2xl object-cover bg-slate-100"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <div>
+                          <span className="text-[11px] font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full inline-block mb-1">
+                            {doc.specialization?.name || 'Terapis Ahli'}
+                          </span>
+                          <h4 className="font-bold text-slate-900 text-sm leading-tight">
+                            {doc.name}
+                          </h4>
+                          <span className="text-xs text-slate-500">
+                            Pengalaman {doc.experience_years || 3}+ Tahun
+                          </span>
+                        </div>
+                      </div>
+
+                      {isSelected && <CheckCircle2 className="w-5 h-5 text-brand-600 flex-shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => setStep(2)}
+                  className="py-3 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Kembali
+                </button>
+                <button
+                  disabled={!selectedDoctorId}
+                  onClick={() => setStep(4)}
+                  className="py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  <span>Lanjut: Tanggal & Slot</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================= */}
+          {/* STEP 4: DATE & SLOTS                              */}
+          {/* ================================================= */}
+          {step === 4 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Langkah 4: Pilih Tanggal & Waktu Konsultasi</h3>
+                  <p className="text-xs text-slate-500">
+                    Jadwal ketersediaan {selectedDoctor?.name || 'Dokter'}.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 uppercase block mb-1.5">
+                  Tanggal Kunjungan Terapi:
                 </label>
                 <input
                   type="date"
                   min={getMinDate()}
+                  max={getMaxDate()}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-semibold text-slate-800"
+                  className="w-full sm:w-64 py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 bg-white"
                 />
               </div>
 
-              {/* Slot Availability Grid */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-brand-600" />
-                    Pilih Jam Konsultasi yang Tersedia:
-                  </label>
-                  {slotsData?.available_slots_count !== undefined && (
-                    <span className="text-xs font-semibold text-brand-700">
-                      {slotsData.available_slots_count} Slot Tersedia
-                    </span>
-                  )}
+              {/* Slot Picker */}
+              <div>
+                <div className="text-xs font-bold text-slate-700 uppercase mb-3">
+                  Slot Waktu Tersedia:
                 </div>
 
                 {loadingSlots ? (
                   <SlotGridSkeleton />
-                ) : !slotsData?.is_open ? (
-                  <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center space-y-1">
-                    <p className="font-bold">Dokter Tidak Praktek pada Tanggal Ini</p>
-                    <p>{slotsData?.message || 'Silakan pilih tanggal lain di mana dokter memiliki jadwal praktek.'}</p>
-                  </div>
-                ) : slotsData?.slots?.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 text-xs text-center">
-                    Tidak ada slot waktu yang tersedia pada tanggal ini.
+                ) : !slotsData || !slotsData.slots || slotsData.slots.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs sm:text-sm">
+                    {slotsData?.message || 'Tidak ada slot waktu tersedia pada tanggal ini. Silakan pilih tanggal lain.'}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {slotsData.slots.map((slot, idx) => {
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    {slotsData.slots.map((slot, index) => {
                       const isSelected = selectedSlot?.start_time === slot.start_time;
-
                       return (
                         <button
-                          key={idx}
+                          key={index}
                           type="button"
                           disabled={!slot.is_available}
                           onClick={() => handleSelectSlot(slot)}
-                          className={`p-3 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-1 ${
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                             isSelected
-                              ? 'bg-brand-600 text-white border-brand-600 shadow-md ring-2 ring-brand-400/30'
+                              ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-500/20'
                               : slot.is_available
-                              ? 'bg-white border-slate-200 text-slate-800 hover:border-brand-500 hover:bg-brand-50/50'
-                              : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through'
+                              ? 'bg-slate-50 hover:bg-brand-50 hover:text-brand-700 border border-slate-200 text-slate-700'
+                              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
                           }`}
                         >
-                          <span>{slot.formatted_label}</span>
-                          <span className="text-[10px] font-normal">
-                            {isSelected ? 'Terpilih' : slot.is_available ? 'Tersedia' : slot.is_booked ? 'Penuh' : 'Lewat'}
-                          </span>
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{slot.start_time}</span>
                         </button>
                       );
                     })}
@@ -391,158 +859,183 @@ export const BookingPage = () => {
                 )}
               </div>
 
-              {/* Navigation buttons */}
-              <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => setStep(1)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5"
+                  onClick={() => setStep(3)}
+                  className="py-3 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 flex items-center gap-1.5"
                 >
                   <ArrowLeft className="w-4 h-4" /> Kembali
                 </button>
                 <button
                   disabled={!selectedSlot}
-                  onClick={() => setStep(3)}
-                  className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-white transition flex items-center gap-1.5"
+                  onClick={() => setStep(5)}
+                  className="py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                  Lanjut ke Keluhan <ArrowRight className="w-4 h-4" />
+                  <span>Lanjut: Keluhan & Kontak</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: KELUHAN PASIEN */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <h2 className="text-lg font-bold text-slate-800">Langkah 3: Informasi Keluhan Medis</h2>
-                <p className="text-xs text-slate-500">Jelaskan keluhan nyeri atau kondisi kesehatan yang Anda rasakan</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Deskripsi Keluhan / Riwayat Nyeri <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={5}
-                  value={complaint}
-                  onChange={(e) => setComplaint(e.target.value)}
-                  placeholder="Contoh: Nyeri punggung bawah menjalar ke pinggul kanan sejak 2 minggu lalu setelah mengangkat benda berat. Terasa sakit terutama saat duduk lama."
-                  className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm leading-relaxed"
-                />
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span>Minimal 10 karakter</span>
-                  <span>{complaint.length} / 1000</span>
+          {/* ================================================= */}
+          {/* STEP 5: COMPLAINT & PHONE                         */}
+          {/* ================================================= */}
+          {step === 5 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                  <PhoneCall className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Langkah 5: Keluhan Pasien & Nomor WhatsApp</h3>
+                  <p className="text-xs text-slate-500">
+                    Jelaskan kondisi atau tantangan tumbuh kembang yang dihadapi buah hati.
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 uppercase block mb-1.5">
+                    Nomor WhatsApp Aktif *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: 081234567890"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Klinik akan mengirimkan pengingat jadwal dan konfirmasi melalui nomor ini.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 uppercase block mb-1.5">
+                    Keluhan & Catatan Khusus (Min. 10 Karakter) *
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    minLength={10}
+                    placeholder="Jelaskan secara singkat kondisi anak, misal: Anak belum lancar bicara di usia 3 tahun, kesulitan fokus..."
+                    value={complaint}
+                    onChange={(e) => setComplaint(e.target.value)}
+                    className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => setStep(2)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5"
+                  onClick={() => setStep(4)}
+                  className="py-3 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 flex items-center gap-1.5"
                 >
                   <ArrowLeft className="w-4 h-4" /> Kembali
                 </button>
                 <button
-                  disabled={complaint.trim().length < 10}
-                  onClick={() => setStep(4)}
-                  className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-white transition flex items-center gap-1.5"
+                  disabled={!phone.trim() || complaint.trim().length < 10}
+                  onClick={() => setStep(6)}
+                  className="py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                  Lanjut ke Ringkasan <ArrowRight className="w-4 h-4" />
+                  <span>Lanjut: Konfirmasi</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: KONFIRMASI & SUBMIT */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <h2 className="text-lg font-bold text-slate-800">Langkah 4: Konfirmasi Booking</h2>
-                <p className="text-xs text-slate-500">Periksa kembali data reservasi sebelum dikirim ke sistem</p>
+          {/* ================================================= */}
+          {/* STEP 6: CONFIRMATION                              */}
+          {/* ================================================= */}
+          {step === 6 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Langkah 6: Konfirmasi Jadwal</h3>
+                  <p className="text-xs text-slate-500">
+                    Mohon periksa kembali detail pesanan sesi terapi sebelum mengirimkan formulir.
+                  </p>
+                </div>
               </div>
 
-              {/* Summary Card */}
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
-                  <div>
-                    <span className="text-slate-400 block text-xs">Dokter Terapi:</span>
-                    <span className="font-bold text-slate-800">{selectedDoctor?.name}</span>
-                    <span className="text-xs text-brand-700 block">{selectedDoctor?.specialization?.name}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-xs">Jadwal Appointment:</span>
-                    <span className="font-bold text-slate-800">{selectedDate}</span>
-                    <span className="text-xs text-brand-700 block">Jam {selectedSlot?.formatted_label} WIB</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-xs">Estimasi Biaya Konsultasi:</span>
-                    <span className="font-extrabold text-brand-700 text-base">
-                      {selectedDoctor?.formatted_fee || `Rp ${Number(selectedDoctor?.consultation_fee).toLocaleString('id-ID')}`}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-xs">Nama Pasien:</span>
-                    <span className="font-bold text-slate-800">{user?.name || 'Harap Login'}</span>
-                    <span className="text-xs text-slate-500 block">{user?.email}</span>
-                  </div>
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4 text-xs sm:text-sm">
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Pasien Anak:</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedChild?.name || guestChildName || 'Pasien Umum'}
+                  </span>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200">
-                  <span className="text-slate-400 block text-xs">Ringkasan Keluhan:</span>
-                  <p className="text-xs sm:text-sm text-slate-700 mt-1 italic">
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Layanan Terapi:</span>
+                  <span className="font-bold text-brand-700">
+                    {selectedService?.name || 'Sesi Terapi Spesialis'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Dokter / Terapis:</span>
+                  <span className="font-bold text-slate-900">{selectedDoctor?.name}</span>
+                </div>
+
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Tanggal Sesi:</span>
+                  <span className="font-bold text-slate-900">
+                    {new Date(selectedDate).toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Waktu / Slot:</span>
+                  <span className="font-bold text-slate-900">{selectedSlot?.start_time} WIB</span>
+                </div>
+
+                <div className="flex justify-between pb-3 border-b border-slate-200">
+                  <span className="text-slate-500">Nomor WhatsApp:</span>
+                  <span className="font-bold text-slate-900">{phone}</span>
+                </div>
+
+                <div className="pt-1">
+                  <span className="text-slate-500 block mb-1">Keluhan / Catatan:</span>
+                  <p className="font-medium text-slate-800 italic bg-white p-3 rounded-xl border border-slate-200">
                     "{complaint}"
                   </p>
                 </div>
               </div>
 
-              {/* Login Notice if unauthenticated */}
-              {!isAuthenticated && (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
-                  <span>Anda belum masuk. Silakan login untuk menyelesaikan reservasi.</span>
-                  <button
-                    onClick={() => navigate('/login', { state: { from: '/booking' } })}
-                    className="px-4 py-1.5 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 transition"
-                  >
-                    Login Sekarang
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => setStep(3)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5"
+                  onClick={() => setStep(5)}
+                  className="py-3 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 flex items-center gap-1.5"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Kembali
+                  <ArrowLeft className="w-4 h-4" /> Ubah Data
                 </button>
-
                 <button
-                  disabled={submitting || !isAuthenticated}
+                  disabled={submitting}
                   onClick={handleSubmitBooking}
-                  className="px-8 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-sm font-bold text-white shadow-lg shadow-brand-500/25 transition active:scale-95 flex items-center gap-2"
+                  className="py-3.5 px-8 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition flex items-center gap-2 disabled:opacity-50"
                 >
-                  {submitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                      Memproses...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      Konfirmasi & Simpan Booking
-                    </>
-                  )}
+                  {submitting ? 'Memproses Reservasi...' : 'Ajukan Reservasi Sekarang'}
                 </button>
               </div>
             </div>
           )}
-
         </div>
       )}
-
     </div>
   );
 };
+
+export default BookingPage;

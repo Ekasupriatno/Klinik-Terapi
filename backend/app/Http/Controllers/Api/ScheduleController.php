@@ -58,8 +58,9 @@ class ScheduleController extends Controller
         $validated = $request->validate([
             'day_of_week' => ['sometimes', 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday'],
             'start_time' => ['sometimes', 'date_format:H:i'],
-            'end_time' => ['sometimes', 'date_format:H:i'],
+            'end_time' => ['sometimes', 'date_format:H:i', 'after:start_time'],
             'slot_duration_minutes' => ['sometimes', 'integer', 'min:15', 'max:120'],
+            'max_quota_per_slot' => ['sometimes', 'integer', 'min:1', 'max:10'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 

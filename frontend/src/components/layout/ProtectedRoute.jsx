@@ -2,8 +2,14 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-export const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+export const ProtectedRoute = ({
+  children,
+  requireAdmin = false,
+  requireTherapist = false,
+  requireParent = false,
+  allowedRoles = null,
+}) => {
+  const { isAuthenticated, user, isAdmin, isTherapist, isParent, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,6 +25,18 @@ export const ProtectedRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireTherapist && !isTherapist && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireParent && !isParent && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (allowedRoles && Array.isArray(allowedRoles) && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/" replace />;
   }
 

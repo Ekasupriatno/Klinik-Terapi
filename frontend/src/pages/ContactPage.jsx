@@ -1,7 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Mail, Clock, MessageSquare, ShieldCheck, Send } from 'lucide-react';
+import { clinicSettingService } from '../services/api';
 
 export const ContactPage = () => {
+  const [settings, setSettings] = useState({
+    name: 'Klinik Terapi & Rehabilitasi Medik',
+    phone: '+62 82235123063',
+    whatsapp: '6282235123063',
+    email: 'layanan@klinikterapi.com',
+    address: 'Jl. HMS Mintareja Sarjana Hukum No.Ruko A-28, Baros, Kec. Cimahi Tengah, Kota Cimahi, Jawa Barat 40521',
+    operational_hours: 'Senin - Jumat: 08:00 - 18:00 WIB\nSabtu: 08:00 - 15:00 WIB\nMinggu & Hari Libur Nasional: Tutup',
+  });
+
+  useEffect(() => {
+    clinicSettingService.getPublicSettings()
+      .then((res) => {
+        if (res.data?.data) {
+          setSettings((prev) => ({ ...prev, ...res.data.data }));
+        }
+      })
+      .catch((err) => console.error('Failed to load clinic settings in ContactPage:', err));
+
+    const handleSettingsUpdated = (e) => {
+      if (e.detail) {
+        setSettings((prev) => ({ ...prev, ...e.detail }));
+      }
+    };
+
+    window.addEventListener('clinic-settings-updated', handleSettingsUpdated);
+    return () => window.removeEventListener('clinic-settings-updated', handleSettingsUpdated);
+  }, []);
+
+  const cleanWhatsappNumber = (settings.whatsapp || '6282235123063').replace(/[^0-9]/g, '');
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
       
@@ -11,7 +42,7 @@ export const ContactPage = () => {
           Pusat Bantuan & Lokasi
         </span>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Hubungi Klinik Terapi & Informasi Fasilitas
+          Hubungi {settings.name}
         </h1>
         <p className="text-slate-600 text-sm">
           Kami siap membantu memberikan penjelasan terkait jenis terapi yang cocok dengan keluhan nyeri Anda.
@@ -33,8 +64,8 @@ export const ContactPage = () => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-800">Alamat Fasilitas Terapi</h4>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  Gedung Medika Sehat Lt. 1 & 2, Jl. Sehat Bugar Sejahtera No. 88, Kebayoran Baru, Jakarta Selatan 12180
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed whitespace-pre-line">
+                  {settings.address}
                 </p>
               </div>
             </div>
@@ -45,8 +76,10 @@ export const ContactPage = () => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-800">WhatsApp & Telepon Resmi</h4>
-                <p className="text-xs text-slate-500 mt-0.5">+62 812-3456-7890 (Fast Response)</p>
-                <p className="text-xs text-slate-500">(021) 7890-1234 (Hotline Telepon)</p>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">{settings.phone} (Telepon)</p>
+                {settings.whatsapp && (
+                  <p className="text-xs text-emerald-600 font-medium">+{cleanWhatsappNumber} (WhatsApp)</p>
+                )}
               </div>
             </div>
 
@@ -56,23 +89,23 @@ export const ContactPage = () => {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-800">Email Pelayanan & Rujukan</h4>
-                <p className="text-xs text-slate-500 mt-0.5">layanan@klinikterapi.com</p>
+                <p className="text-xs text-slate-500 mt-0.5">{settings.email}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5" />
+            {settings.operational_hours && (
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Jam Operasional Klinik</h4>
+                  <p className="text-xs text-slate-500 mt-0.5 whitespace-pre-line leading-relaxed">
+                    {settings.operational_hours}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-800">Jam Operasional Klinik</h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Senin - Jumat: 08:00 - 18:00 WIB<br />
-                  Sabtu: 08:00 - 15:00 WIB<br />
-                  Minggu & Hari Libur Nasional: Tutup
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* WhatsApp Direct Banner */}
@@ -82,7 +115,7 @@ export const ContactPage = () => {
               Tim perawat dan resepsionis kami siap melayani pertanyaan seputar estimasi biaya, persiapan terapi, dan panduan rujukan dokter.
             </p>
             <a
-              href="https://wa.me/6281234567890?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20berkonsultasi%20mengenai%20layanan"
+              href={`https://wa.me/${cleanWhatsappNumber}?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20berkonsultasi%20mengenai%20layanan`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-emerald-800 text-xs font-bold hover:bg-emerald-50 transition shadow-sm"

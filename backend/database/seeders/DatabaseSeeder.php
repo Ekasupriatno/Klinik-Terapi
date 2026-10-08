@@ -2,10 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Models\Article;
 use App\Models\Booking;
+use App\Models\Child;
 use App\Models\Doctor;
+use App\Models\Guardian;
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Review;
 use App\Models\Schedule;
+use App\Models\Service;
 use App\Models\Specialization;
 use App\Models\User;
 use Carbon\Carbon;
@@ -25,18 +31,90 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Administrator Klinik',
                 'phone' => '081234567890',
-                'password' => Hash::make('admin12345'),
+                'password' => Hash::make('AdminKlinik!2026'),
                 'role' => 'admin',
             ]
         );
 
-        $patient = User::firstOrCreate(
-            ['email' => 'pasien@gmail.com'],
+        $parent = User::firstOrCreate(
+            ['email' => 'parent@gmail.com'],
             [
                 'name' => 'Budi Santoso',
                 'phone' => '089876543210',
-                'password' => Hash::make('pasien12345'),
-                'role' => 'patient',
+                'password' => Hash::make('ParentDemo!2026'),
+                'role' => 'parent',
+            ]
+        );
+
+        $pasien = User::firstOrCreate(
+            ['email' => 'pasien@gmail.com'],
+            [
+                'name' => 'Pasien Demo (Wali)',
+                'phone' => '081234567899',
+                'password' => Hash::make('PasienDemo!2026'),
+                'role' => 'parent',
+            ]
+        );
+
+        $therapistUser = User::firstOrCreate(
+            ['email' => 'therapist@klinikterapi.com'],
+            [
+                'name' => 'dr. Hendra Wijaya, Sp.KFR',
+                'phone' => '081234567800',
+                'password' => Hash::make('Therapist!2026'),
+                'role' => 'therapist',
+            ]
+        );
+
+        // Create guardian profile for parent
+        $guardian = Guardian::firstOrCreate(
+            ['user_id' => $parent->id],
+            [
+                'phone' => '089876543210',
+                'address' => 'Jl. Merdeka No. 123, Jakarta',
+                'emergency_contact' => 'Siti Santoso',
+                'emergency_phone' => '081234567891',
+                'relationship_to_child' => 'parent',
+            ]
+        );
+
+        $guardianPasien = Guardian::firstOrCreate(
+            ['user_id' => $pasien->id],
+            [
+                'phone' => '081234567899',
+                'address' => 'Jl. Mawar No. 45, Jakarta Selatan',
+                'emergency_contact' => 'Dewi Lestari',
+                'emergency_phone' => '081298765432',
+                'relationship_to_child' => 'parent',
+            ]
+        );
+
+        // Create child/patient
+        $child = Child::firstOrCreate(
+            [
+                'guardian_id' => $guardian->id,
+                'name' => 'Andi Santoso',
+            ],
+            [
+                'birth_date' => '2018-05-15',
+                'gender' => 'male',
+                'status' => 'active',
+                'medical_history' => 'Tidak ada riwayat penyakit berat',
+                'allergies' => 'Tidak ada',
+            ]
+        );
+
+        Child::firstOrCreate(
+            [
+                'guardian_id' => $guardianPasien->id,
+                'name' => 'Dinda Putri',
+            ],
+            [
+                'birth_date' => '2019-08-10',
+                'gender' => 'female',
+                'status' => 'active',
+                'medical_history' => 'Speech delay ringan',
+                'allergies' => 'Alergi dingin',
             ]
         );
 
@@ -164,13 +242,63 @@ class DatabaseSeeder extends Seeder
                 );
             }
         }
+        if ($doctors !== [] && $doctors[0]->user_id === null) {
+            $doctors[0]->update(['user_id' => $therapistUser->id]);
+        }
 
-        // 5. Contoh Booking & Review Riwayat
+        // 5. Services
+        $servicesData = [
+            [
+                'specialization_id' => $specializations['fisioterapi']->id,
+                'name' => 'Sesi Fisioterapi Individual',
+                'description' => 'Terapi fisik satu-satu dengan fisioterapis untuk penanganan cedera dan rehabilitasi.',
+                'duration_minutes' => 60,
+                'price' => 250000,
+                'age_target' => 'Semua usia',
+                'benefits' => 'Pemulihan mobilitas, pengurangan nyeri, penguatan otot',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            [
+                'specialization_id' => $specializations['terapi-wicara']->id,
+                'name' => 'Evaluasi Terapi Wicara',
+                'description' => 'Asesmen awal kemampuan bicara dan bahasa anak.',
+                'duration_minutes' => 45,
+                'price' => 180000,
+                'age_target' => '2-12 tahun',
+                'benefits' => 'Identifikasi keterlambatan bicara, rencana intervensi',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            [
+                'specialization_id' => $specializations['akupunktur-medis']->id,
+                'name' => 'Sesi Akupunktur Medis',
+                'description' => 'Terapi jarum medis untuk pereda nyeri dan peredaran darah.',
+                'duration_minutes' => 45,
+                'price' => 220000,
+                'age_target' => 'Dewasa',
+                'benefits' => 'Pereda nyeri, relaksasi, perbaikan sirkulasi',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+        ];
+
+        $services = [];
+        foreach ($servicesData as $serviceItem) {
+            $services[] = Service::firstOrCreate(
+                ['name' => $serviceItem['name']],
+                $serviceItem
+            );
+        }
+
+        // 6. Contoh Booking & Review Riwayat
         $demoBooking = Booking::firstOrCreate(
             ['booking_code' => 'KT-202609-DEMO1'],
             [
-                'user_id' => $patient->id,
+                'user_id' => $parent->id,
+                'child_id' => $child->id,
                 'doctor_id' => $doctors[0]->id,
+                'service_id' => $services[0]->id,
                 'appointment_date' => Carbon::yesterday()->toDateString(),
                 'appointment_time' => '10:00:00',
                 'end_time' => '10:30:00',
@@ -184,11 +312,73 @@ class DatabaseSeeder extends Seeder
         Review::firstOrCreate(
             ['booking_id' => $demoBooking->id],
             [
-                'user_id' => $patient->id,
+                'user_id' => $parent->id,
                 'doctor_id' => $doctors[0]->id,
                 'rating' => 5,
                 'comment' => 'Pelayanan sangat ramah dan penjelasannya dokter sangat detail. Nyeri punggung terasa jauh lebih ringan.',
             ]
         );
+
+        // 7. Sample Invoice & Payment
+        $invoice = Invoice::firstOrCreate(
+            ['invoice_number' => 'INV-DEMO001'],
+            [
+                'booking_id' => $demoBooking->id,
+                'child_id' => $child->id,
+                'guardian_id' => $guardian->id,
+                'subtotal' => 250000,
+                'discount_amount' => 0,
+                'tax_amount' => 0,
+                'total' => 250000,
+                'status' => 'paid',
+                'due_date' => Carbon::yesterday()->addDays(7),
+                'paid_at' => Carbon::yesterday(),
+            ]
+        );
+
+        Payment::firstOrCreate(
+            [
+                'invoice_id' => $invoice->id,
+                'amount' => 250000,
+            ],
+            [
+                'method' => 'cash',
+                'status' => 'completed',
+                'paid_at' => Carbon::yesterday(),
+            ]
+        );
+
+        // 8. Sample Articles
+        $articlesData = [
+            [
+                'title' => 'Pentingnya Deteksi Dini Keterlambatan Bicara pada Anak',
+                'slug' => 'pentingnya-deteksi-dini-keterlambatan-bicara',
+                'content' => 'Keterlambatan bicara pada anak dapat mempengaruhi perkembangan sosial dan emosional...',
+                'excerpt' => 'Kenali tanda-tanda keterlambatan bicara dan kapan saatnya berkonsultasi dengan terapis wicara.',
+                'category' => 'Edukasi Orang Tua',
+                'tags' => 'terapi wicara,anak,perkembangan',
+                'is_published' => true,
+                'published_at' => Carbon::now()->subDays(10),
+                'author_id' => $admin->id,
+            ],
+            [
+                'title' => 'Tips Merawat Punggung untuk Orang yang Bekerja di Kantor',
+                'slug' => 'tips-merawat-punggung-pekerja-kantor',
+                'content' => 'Duduk terlalu lama dapat menyebabkan nyeri punggung dan postur yang buruk...',
+                'excerpt' => 'Pelajari cara menjaga kesehatan punggung meskipun bekerja di depan komputer sepanjang hari.',
+                'category' => 'Kesehatan',
+                'tags' => 'fisioterapi,nyeri punggang,postur',
+                'is_published' => true,
+                'published_at' => Carbon::now()->subDays(5),
+                'author_id' => $admin->id,
+            ],
+        ];
+
+        foreach ($articlesData as $articleItem) {
+            Article::firstOrCreate(
+                ['slug' => $articleItem['slug']],
+                $articleItem
+            );
+        }
     }
 }

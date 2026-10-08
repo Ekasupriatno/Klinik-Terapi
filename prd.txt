@@ -1,0 +1,579 @@
+PRODUCT REQUIREMENTS DOCUMENT
+Sistem Manajemen Klinik Terapi Psikologi Anak
+PRD v1.0 • React + Laravel • Web Application
+1. Product Overview
+Sistem ini adalah aplikasi web untuk mengelola proses pelayanan dan operasional klinik terapi psikologi anak
+secara terintegrasi, mulai dari pendaftaran, intake, booking, pelaksanaan terapi, catatan sesi, pembayaran,
+monitoring perkembangan, hingga pelaporan.
+Platform utama terdiri dari Public Website untuk orang tua/calon pasien dan Internal Clinic System untuk admin,
+psikolog/terapis, serta owner/manager.
+2. Problem Statement
+ Data pasien, orang tua, jadwal, terapi, pembayaran, dan dokumen sering tersebar di WhatsApp, spreadsheet,
+dan dokumen manual.
+ Risiko bentrok jadwal dan kesalahan pencatatan cukup tinggi.
+ Riwayat terapi dan perkembangan anak sulit ditelusuri secara terstruktur.
+ Admin membutuhkan waktu lebih banyak untuk pekerjaan administratif.
+ Owner/manager sulit memperoleh laporan operasional secara cepat.
+ Data psikologis dan data anak merupakan informasi sensitif sehingga membutuhkan kontrol akses dan
+keamanan yang ketat.
+3. Product Goals
+ Memusatkan data klinik dalam satu sistem.
+ Mempermudah orang tua melakukan registrasi dan booking.
+ Mempermudah terapis membuat dan meninjau catatan sesi.
+ Menyediakan monitoring perkembangan anak yang terstruktur.
+ Mengurangi kesalahan jadwal dan pekerjaan administratif.
+ Menyediakan dashboard dan laporan operasional.
+ Menerapkan keamanan berbasis role, permission, audit log, dan perlindungan data sensitif.
+ Membangun arsitektur yang dapat dikembangkan menjadi aplikasi mobile atau integrasi pihak ketiga.
+4. Success Metrics / KPI
+KPI Target Awal
+Waktu registrasi pasien < 5 menit
+Waktu booking < 2 menit
+Kesalahan jadwal < 1%
+Data pasien terpusat 100%
+Catatan sesi digital > 90%
+Availability sistem > 99%
+Response API normal < 500 ms
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+Audit log aktivitas sensitif 100%
+5. User Roles & Access
+Role Fungsi Utama Akses
+Super Admin Konfigurasi sistem, user, role,
+layanan, laporan Penuh
+Admin / Receptionist Pasien, guardian, booking,
+pembayaran Operasional
+Psychologist / Therapist Assessment, treatment plan,
+session notes, progress Klinis sesuai pasien
+Owner / Manager Dashboard, statistik, laporan Manajerial
+Parent / Guardian Profil anak, booking, jadwal,
+invoice, ringkasan yang dibagikan Data milik sendiri
+6. Core User Flow
+Alur pasien baru:
+1. Orang tua membuka website.
+2. Memilih layanan terapi.
+3. Membuat akun atau mengisi data kontak.
+4. Mendaftarkan data anak.
+5. Mengisi intake/screening form.
+6. Memilih layanan dan terapis jika tersedia.
+7. Memilih jadwal.
+8. Melakukan booking.
+9. Melakukan pembayaran jika diperlukan.
+10. Menerima konfirmasi.
+11. Anak menjalani sesi terapi.
+12. Terapis membuat session note.
+13. Perkembangan dicatat secara berkala.
+14. Orang tua menerima ringkasan yang memang diperbolehkan untuk dibagikan.
+7. Public Website
+7.1 Homepage
+ Hero section.
+ Profil singkat klinik.
+ Daftar layanan.
+ Profil psikolog/terapis.
+ Keunggulan klinik.
+ Alur konsultasi.
+ Testimoni dengan persetujuan penggunaan.
+ Artikel edukasi.
+ FAQ.
+ Kontak dan lokasi.
+ CTA Booking / Konsultasi.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+7.2 Layanan
+ Daftar layanan.
+ Detail layanan.
+ Usia target.
+ Durasi sesi.
+ Deskripsi manfaat.
+ Harga jika klinik memilih menampilkannya.
+ Terapis yang menyediakan layanan.
+ CTA booking.
+7.3 Profil Terapis
+ Nama.
+ Foto profesional.
+ Gelar/kualifikasi yang relevan.
+ Spesialisasi.
+ Bahasa.
+ Jadwal praktik.
+ Layanan yang ditangani.
+ Profil profesional.
+7.4 Artikel Edukasi
+ Daftar artikel.
+ Kategori.
+ Pencarian.
+ Detail artikel.
+ Related articles.
+ SEO metadata.
+8. Parent Portal
+8.1 Dashboard
+ Anak yang terdaftar.
+ Booking berikutnya.
+ Riwayat sesi.
+ Status pembayaran.
+ Notifikasi.
+ Ringkasan perkembangan yang dibagikan.
+8.2 Child Profile
+ Identitas dasar anak.
+ Tanggal lahir.
+ Informasi kontak guardian.
+ Informasi yang relevan untuk pelayanan.
+ Dokumen yang diizinkan klinik.
+ Status aktif/nonaktif.
+8.3 Booking
+ Pilih anak.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Pilih layanan.
+ Pilih terapis jika tersedia.
+ Pilih tanggal dan jam.
+ Konfirmasi booking.
+ Pembayaran.
+ Reschedule/cancel sesuai kebijakan klinik.
+9. Intake & Assessment
+ Form intake awal.
+ Keluhan utama berdasarkan informasi guardian.
+ Riwayat perkembangan yang relevan.
+ Riwayat pendidikan bila diperlukan.
+ Informasi keluarga yang relevan.
+ Form screening sesuai instrumen yang digunakan klinik.
+ Assessment klinis hanya dapat diakses oleh role yang berwenang.
+ Versi form dan waktu pengisian harus tersimpan.
+Catatan: instrumen psikologis, scoring, dan interpretasi harus mengikuti kebijakan profesional dan
+lisensi/pedoman yang berlaku. Sistem tidak boleh mengubah atau mengotomatisasi interpretasi klinis tanpa
+validasi profesional.
+10. Therapist / Psychologist Portal
+10.1 Dashboard
+ Jadwal hari ini.
+ Pasien hari ini.
+ Sesi mendatang.
+ Session notes yang belum selesai.
+ Reminder.
+10.2 Patient List
+ Daftar pasien yang ditugaskan.
+ Pencarian.
+ Filter status.
+ Riwayat sesi.
+ Treatment plan.
+ Progress.
+10.3 Session Management
+ Check-in.
+ Session started.
+ Session completed.
+ Session cancelled/no-show.
+ Catatan sesi.
+ Intervensi yang digunakan.
+ Observasi.
+ Progress.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Rencana sesi berikutnya.
+ Follow-up.
+11. Treatment Plan
+ Masalah/tujuan terapi yang terdokumentasi secara profesional.
+ Tujuan jangka pendek.
+ Tujuan jangka panjang.
+ Intervensi.
+ Frekuensi terapi.
+ Target evaluasi.
+ Status: active / completed / paused.
+ Review date.
+12. Progress Monitoring
+ Progress per sesi.
+ Milestone.
+ Goal tracking.
+ Review berkala.
+ Catatan perubahan.
+ Ringkasan perkembangan yang dapat dibagikan kepada guardian.
+ Riwayat perubahan data.
+13. Appointment & Schedule Management
+ Calendar harian/mingguan/bulanan.
+ Availability terapis.
+ Booking.
+ Reschedule.
+ Cancellation.
+ No-show.
+ Recurring appointment jika diperlukan.
+ Conflict detection.
+ Buffer time antar sesi jika diperlukan.
+ Holiday/clinic closure.
+14. Payment & Billing
+ Daftar tarif layanan.
+ Invoice.
+ Payment status: unpaid / pending / paid / failed / refunded.
+ Metode pembayaran.
+ Riwayat transaksi.
+ Receipt.
+ Diskon jika digunakan.
+ Refund sesuai kebijakan klinik.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+15. Admin Panel
+ Dashboard.
+ Patient management.
+ Guardian management.
+ Therapist management.
+ Service management.
+ Appointment management.
+ Payment management.
+ Article management.
+ FAQ management.
+ Clinic settings.
+ User & role management.
+ Audit log.
+ Reports.
+16. Dashboard & Reporting
+Dashboard Data
+Operational Booking hari ini, sesi selesai, cancelled, no-show
+Patient Pasien baru, pasien aktif, pasien selesai
+Therapist Jumlah sesi, jadwal, completion
+Finance Revenue, paid, pending, refund
+Service Jumlah booking per layanan
+Trend Booking dan sesi berdasarkan periode
+17. Notification System
+ Booking confirmation.
+ Booking reminder.
+ Reschedule notification.
+ Cancellation notification.
+ Payment confirmation.
+ Payment failure.
+ Session reminder.
+ Follow-up reminder.
+ Notifikasi internal untuk admin/terapis.
+Channel dapat dikembangkan bertahap: in-app notification, email, WhatsApp melalui provider resmi, dan SMS
+bila diperlukan.
+18. Data Model / Database
+Entity Contoh Field Utama
+users id, name, email, password, status, last_login_at
+roles id, name
+permissions id, name
+guardians id, user_id, phone, address
+children/patients id, guardian_id, name, birth_date, gender, status
+therapists id, user_id, professional_info, status
+services id, name, description, duration, price, status
+appointments id, patient_id, therapist_id, service_id, start_at,
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+end_at, status
+intake_forms id, patient_id, version, submitted_at
+assessments id, patient_id, therapist_id, type, status
+treatment_plans id, patient_id, therapist_id, goals, status
+session_notes id, appointment_id, therapist_id, note, next_plan
+progress_records id, patient_id, therapist_id, metric, value, recorded_at
+invoices id, patient_id, appointment_id, total, status
+payments id, invoice_id, amount, method, status, paid_at
+documents id, patient_id, type, path, uploaded_by
+articles id, title, slug, content, status, published_at
+notifications id, user_id, type, title, read_at
+audit_logs id, user_id, action, entity, entity_id, metadata,
+created_at
+19. Recommended Architecture
+Frontend:
+ React + Vite.
+ React Router.
+ Axios atau fetch untuk API.
+ Context/Zustand/Redux sesuai kompleksitas.
+ Component-based architecture.
+ Form validation menggunakan library yang sesuai.
+ Responsive design.
+Backend:
+ Laravel REST API.
+ Laravel Sanctum untuk authentication.
+ Form Request untuk validation.
+ API Resource untuk response.
+ Service layer untuk business logic.
+ Policy/Gate untuk authorization.
+ Queue untuk pekerjaan asynchronous.
+ Laravel Scheduler untuk pekerjaan terjadwal.
+ Storage abstraction untuk file.
+ Database transaction untuk operasi kritis.
+Database & infrastructure:
+ MySQL atau PostgreSQL.
+ Redis untuk cache/queue bila dibutuhkan.
+ Object storage untuk file/foto jika skala meningkat.
+ HTTPS.
+ Automated backup.
+ Monitoring dan logging.
+20. Authentication & Authorization
+ Login.
+ Register.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Forgot password.
+ Reset password.
+ Remember login sesuai kebutuhan.
+ Logout.
+ Session/token revocation.
+ Rate limiting.
+ Role-based access control.
+ Permission-based access control.
+ Optional 2FA untuk role tertentu.
+ Email verification bila diperlukan.
+21. Security Requirements
+ HTTPS wajib di production.
+ Password disimpan menggunakan hashing aman.
+ Jangan menyimpan password dalam plaintext.
+ Sanitasi dan validasi input.
+ Protection terhadap SQL injection melalui ORM/query binding.
+ Protection terhadap XSS.
+ CSRF protection sesuai arsitektur authentication.
+ Rate limiting pada login dan endpoint sensitif.
+ Authorization server-side pada setiap resource sensitif.
+ Audit log untuk perubahan data penting.
+ File upload validation: MIME/type, extension, size, dan content validation.
+ Private storage untuk dokumen sensitif.
+ Signed/temporary URL jika file perlu diakses.
+ Backup terenkripsi dan pengujian restore.
+ Secrets disimpan melalui environment/secret management, bukan repository.
+ Minimalkan data sensitif yang dikirim ke frontend.
+ Log aplikasi tidak boleh membocorkan password, token, atau data klinis sensitif.
+22. Privacy & Sensitive Data
+Karena sistem menangani data anak dan informasi psikologis, privacy harus menjadi requirement inti, bukan fitur
+tambahan.
+ Tentukan data apa yang wajib dan apa yang opsional.
+ Gunakan least-privilege access.
+ Pisahkan data administratif dan data klinis jika sesuai kebutuhan.
+ Batasi akses berdasarkan assignment pasien.
+ Catat siapa yang melihat/mengubah data sensitif bila diperlukan.
+ Sediakan mekanisme koreksi data.
+ Tetapkan kebijakan retensi dan penghapusan data sesuai kewajiban hukum dan kebijakan klinik.
+ Pastikan penggunaan foto, testimoni, dan materi anak memiliki persetujuan yang sesuai.
+ Tinjau kepatuhan terhadap regulasi perlindungan data yang berlaku di Indonesia sebelum production.
+23. File & Image Management
+ Foto profil terapis/pasien menggunakan format web yang efisien bila sesuai kebutuhan.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Generate thumbnail untuk daftar pasien/terapis.
+ Jangan menggunakan PNG berukuran besar sebagai format default untuk semua foto.
+ Compress/resize pada saat upload atau melalui background processing.
+ Simpan original hanya jika memang diperlukan.
+ Gunakan private storage untuk dokumen klinis.
+ Gunakan CDN/object storage jika jumlah file meningkat.
+ Batasi ukuran dan dimensi upload.
+24. API Structure
+Contoh struktur endpoint:
+Method Endpoint Fungsi
+POST /api/auth/login Login
+POST /api/auth/logout Logout
+GET /api/auth/me Current user
+POST /api/auth/forgot-password Forgot password
+POST /api/auth/reset-password Reset password
+GET /api/services List layanan
+GET /api/therapists List terapis
+POST /api/patients Create patient
+GET /api/patients/{id} Patient detail
+GET /api/appointments Appointment list
+POST /api/appointments Create booking
+PATCH /api/appointments/{id} Update booking
+DELETE /api/appointments/{id} Cancel/delete sesuai policy
+POST /api/session-notes Create session note
+GET /api/progress/{patient} Progress data
+GET /api/invoices Invoice list
+POST /api/payments Create payment
+GET /api/articles Article list
+25. Frontend Page Structure
+Area Pages
+Public Home, About, Services, Therapists, Articles, Contact,
+FAQ
+Auth Login, Register, Forgot Password, Reset Password
+Parent Dashboard, Children, Child Detail, Booking,
+Appointments, Payments, Profile
+Therapist
+Dashboard, Calendar, Patients, Patient Detail,
+Assessment, Treatment Plan, Session Notes,
+Progress
+Admin
+Dashboard, Patients, Guardians, Therapists,
+Services, Appointments, Payments, Articles, Users,
+Reports, Audit Logs, Settings
+26. UX Requirements
+ Mobile-first untuk parent portal.
+ Desktop-friendly untuk admin dan therapist.
+ Navigasi sederhana.
+ Status booking harus mudah dipahami.
+ Form panjang dibagi menjadi beberapa step.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Tampilkan validation error dekat field.
+ Gunakan confirmation sebelum operasi destruktif.
+ Tampilkan loading state.
+ Tampilkan empty state.
+ Tampilkan error state yang informatif tanpa membocorkan detail teknis.
+ Accessibility dasar: keyboard navigation, label form, contrast, semantic HTML.
+27. Non-Functional Requirements
+Kategori Requirement
+Performance API normal <500 ms; halaman utama dioptimalkan
+Scalability Dapat ditingkatkan ke object storage, Redis, queue,
+CDN
+Security RBAC, validation, rate limit, audit log, HTTPS
+Availability Target >99%
+Backup Backup database terjadwal dan restore test
+Maintainability Clean architecture, service layer, tests
+Observability Application log, error monitoring, audit log
+Compatibility Chrome, Edge, Safari modern; mobile responsive
+28. MVP Scope
+Versi MVP sebaiknya tidak langsung mengimplementasikan seluruh fitur.
+ Authentication.
+ Role & permission dasar.
+ Parent/guardian.
+ Data anak/pasien.
+ Data therapist.
+ Layanan.
+ Booking.
+ Calendar sederhana.
+ Session notes.
+ Dashboard admin.
+ Dashboard therapist.
+ Payment/invoice dasar.
+ Article management.
+ Audit log dasar.
+ Security baseline.
+29. Phase 2
+ Advanced assessment.
+ Treatment plan yang lebih lengkap.
+ Progress dashboard.
+ Automated reminders.
+ WhatsApp integration.
+ Advanced reports.
+ Recurring appointments.
+ Online payment gateway.
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ Parent progress portal.
+ Advanced audit & compliance features.
+30. Phase 3
+ Mobile application.
+ Teleconsultation jika diperlukan.
+ Advanced analytics.
+ Multi-branch clinic.
+ Multi-tenant architecture jika sistem dijadikan SaaS.
+ Integration dengan sistem eksternal.
+ Advanced scheduling optimization.
+31. Acceptance Criteria — MVP
+15. User dapat login dan logout.
+16. Role tidak dapat mengakses endpoint yang tidak diizinkan.
+17. Admin dapat membuat data pasien.
+18. Admin dapat membuat data therapist.
+19. Admin dapat membuat layanan.
+20. Parent dapat memiliki lebih dari satu anak.
+21. Parent dapat melakukan booking.
+22. Sistem menolak jadwal yang bentrok.
+23. Therapist dapat melihat pasien yang ditugaskan.
+24. Therapist dapat membuat session note.
+25. Session note tidak dapat diakses parent kecuali informasi tersebut secara eksplisit dibagikan.
+26. Admin dapat melihat status pembayaran.
+27. Sistem mencatat aktivitas sensitif yang ditentukan.
+28. File upload divalidasi.
+29. Password tidak pernah disimpan plaintext.
+30. Endpoint login memiliki rate limiting.
+31. Backup database dapat direstore.
+32. Testing Strategy
+ Unit test untuk service dan business logic.
+ Feature/API test untuk authentication, booking, authorization, payment.
+ Integration test untuk flow penting.
+ Frontend component test.
+ End-to-end test untuk registration → booking → session.
+ Security testing untuk authorization, upload, rate limit, dan input validation.
+ Load testing sebelum deployment skala besar.
+33. Deployment Architecture
+Contoh production architecture:
+User → CDN/Reverse Proxy → React Frontend → Laravel API → Database
+ ↘ Queue/Redis
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+ ↘ Object Storage
+ Frontend dapat di-deploy sebagai static build.
+ Laravel berjalan pada VPS/server.
+ Database berada pada server/database service yang aman.
+ Gunakan HTTPS dan firewall.
+ Gunakan process manager untuk worker.
+ Scheduler Laravel dijalankan melalui cron.
+ Backup database otomatis.
+ Environment variables untuk secret.
+ CI/CD dapat ditambahkan setelah MVP stabil.
+34. Suggested Laravel Folder Structure
+app/
+├── Http/
+│ ├── Controllers/
+│ ├── Requests/
+│ ├── Resources/
+│ └── Middleware/
+├── Models/
+├── Services/
+├── Policies/
+├── Actions/
+├── Jobs/
+├── Notifications/
+└── Rules/
+database/
+├── migrations/
+├── seeders/
+└── factories/
+routes/
+├── api.php
+└── web.php
+35. Suggested React Folder Structure
+src/
+├── components/
+├── pages/
+├── layouts/
+├── routes/
+├── services/
+├── context/
+├── hooks/
+├── utils/
+├── features/
+│ ├── auth/
+│ ├── patients/
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+│ ├── appointments/
+│ ├── therapists/
+│ ├── payments/
+│ └── reports/
+├── assets/
+└── App.jsx
+36. Recommended Development Order
+32. Setup repository dan environment.
+33. Setup Laravel API dan database.
+34. Setup React + routing.
+35. Authentication + authorization.
+36. User/role/permission.
+37. Guardian + patient.
+38. Therapist.
+39. Services.
+40. Appointment/booking.
+41. Calendar.
+42. Session notes.
+43. Payment/invoice.
+44. Dashboard.
+45. Article CMS.
+46. Notification.
+47. Audit log.
+48. Testing.
+49. Security hardening.
+50. Deployment.
+37. Definition of Done
+ Feature telah memiliki UI.
+ API telah memiliki validation.
+ Authorization telah diuji.
+ Error handling tersedia.
+ Loading/empty/error state tersedia.
+ Unit/feature test untuk logic penting tersedia.
+ Audit log tersedia untuk aksi sensitif.
+ Dokumentasi API diperbarui.
+ Tidak ada secret di repository.
+ Production environment menggunakan HTTPS.
+ Backup telah diuji.
+ Security review dilakukan sebelum production.
+38. Risiko & Mitigasi
+Risiko Mitigasi
+Kebocoran data sensitif RBAC, policy, private storage, audit log,
+encryption/HTTPS
+Bentrok jadwal Availability checking + database transaction/constraint
+Data hilang Automated backup + restore test
+PRD — Sistem Manajemen Klinik Terapi Psikologi Anak | v1.0
+File terlalu besar Resize/compress + size limit + object storage
+Unauthorized access Server-side authorization + least privilege
+Human error Validation + confirmation + audit trail
+Server overload Queue, caching, pagination, image optimization
+Downtime Monitoring, backups, health checks, deployment
+discipline
+39. Future Product Vision
+Dalam jangka panjang, sistem dapat berkembang menjadi platform manajemen klinik terapi anak yang
+mendukung multi-cabang, mobile app, integrasi pembayaran dan komunikasi, analitik perkembangan, serta
+integrasi layanan eksternal. Pengembangan fitur klinis harus tetap mempertahankan prinsip bahwa sistem
+mendukung pekerjaan profesional, bukan menggantikan penilaian klinis psikolog/terapis.
+40. Product Summary
+Produk akhir yang dituju adalah sistem klinik terpadu dengan alur:
+PUBLIC WEBSITE → REGISTRATION → INTAKE → BOOKING → PAYMENT → THERAPY → SESSION
+NOTES → PROGRESS → REPORTING
+Fondasi MVP diprioritaskan pada tiga hal: operasional klinik yang rapi, pengalaman orang tua yang sederhana,
+dan perlindungan data anak serta data klinis yang kuat.

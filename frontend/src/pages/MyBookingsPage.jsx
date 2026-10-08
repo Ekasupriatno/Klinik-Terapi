@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { bookingService, reviewService } from '../services/api';
+import { bookingService, reviewService, clinicSettingService } from '../services/api';
 import { BookingStatusBadge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import {
@@ -19,6 +19,7 @@ export const MyBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState('all'); // all, active, completed, cancelled
+  const [clinicWhatsapp, setClinicWhatsapp] = useState('6282235123063');
 
   // Modal Cancel State
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -37,6 +38,13 @@ export const MyBookingsPage = () => {
 
   useEffect(() => {
     fetchBookings();
+    clinicSettingService.getPublicSettings()
+      .then((res) => {
+        if (res.data?.data?.whatsapp) {
+          setClinicWhatsapp(res.data.data.whatsapp.replace(/[^0-9]/g, ''));
+        }
+      })
+      .catch((err) => console.error('Failed to load clinic settings in MyBookingsPage:', err));
   }, []);
 
   const fetchBookings = async () => {
@@ -213,9 +221,11 @@ export const MyBookingsPage = () => {
                 {/* Doctor info */}
                 <div className="md:col-span-6 flex items-center gap-4">
                   <img
-                    src={b.doctor?.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80'}
+                    src={b.doctor?.image_thumbnail_url || b.doctor?.image_url || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80'}
                     alt={b.doctor?.name}
                     className="w-16 h-16 rounded-2xl object-cover border border-slate-100 flex-shrink-0"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div>
                     <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">
@@ -262,7 +272,7 @@ export const MyBookingsPage = () => {
               <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <a
-                    href={`https://wa.me/6281234567890?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20menanyakan%20status%20booking%20nomor%20${encodeURIComponent(b.booking_code)}`}
+                    href={`https://wa.me/${clinicWhatsapp}?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20menanyakan%20status%20booking%20nomor%20${encodeURIComponent(b.booking_code)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold transition flex items-center gap-1.5"

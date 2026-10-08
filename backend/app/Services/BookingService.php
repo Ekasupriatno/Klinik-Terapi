@@ -6,6 +6,8 @@ use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Notifications\BookingApprovedNotification;
+use App\Notifications\PatientBookingNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -55,9 +57,12 @@ class BookingService
             $uniqueCode = 'KT-' . Carbon::now()->format('Ym') . '-' . strtoupper(Str::random(5));
 
             // 5. Simpan booking baru
-            return Booking::create([
+            $booking = Booking::create([
                 'booking_code' => $uniqueCode,
                 'user_id' => $user->id,
+                'child_id' => $data['child_id'] ?? null,
+                'service_id' => $data['service_id'] ?? null,
+                'phone' => $data['phone'] ?? $user->phone ?? null,
                 'doctor_id' => $doctor->id,
                 'schedule_id' => $data['schedule_id'] ?? null,
                 'appointment_date' => $appointmentDate,
@@ -66,6 +71,13 @@ class BookingService
                 'status' => 'pending',
                 'patient_complaint' => $data['patient_complaint'],
             ]);
+
+            $recipient = $doctor->user;
+            if ($recipient?->role === 'therapist') {
+                $recipient->notify(new PatientBookingNotification($booking));
+            }
+
+            return $booking;
         });
     }
 
@@ -107,17 +119,26 @@ class BookingService
             ]);
         }
 
-        $updates = ['status' => $newStatus];
-        if ($notes !== null) {
-            $updates['doctor_notes'] = $notes;
-        }
+        $wasPending = $booking->status === 'pending';
 
-        if ($newStatus === 'confirmed' && !$booking->confirmed_at) {
-            $updates['confirmed_at'] = Carbon::now();
-        }
+        return DB::transaction(function () use ($booking, $newStatus, $notes, $wasPending) {
+            $updates = ['status' => $newStatus];
+            if ($notes !== null) {
+                $updates['doctor_notes'] = $notes;
+            }
 
-        $booking->update($updates);
+            if ($newStatus === 'confirmed' && !$booking->confirmed_at) {
+                $updates['confirmed_at'] = Carbon::now();
+            }
 
-        return $booking->fresh();
+            $booking->update($updates);
+            $updatedBooking = $booking->fresh();
+
+            if ($wasPending && $newStatus === 'confirmed' && $updatedBooking->user) {
+                $updatedBooking->user->notify(new BookingApprovedNotification($updatedBooking));
+            }
+
+            return $updatedBooking;
+        });
     }
 }

@@ -21,6 +21,7 @@ class BookingResource extends JsonResource
         return [
             'id' => $this->id,
             'booking_code' => $this->booking_code,
+            'phone' => $this->phone,
             'appointment_date' => $this->appointment_date?->format('Y-m-d'),
             'formatted_date' => $this->appointment_date?->translatedFormat('d F Y') ?? $this->appointment_date?->format('d M Y'),
             'appointment_time' => substr($this->appointment_time, 0, 5),
@@ -36,7 +37,9 @@ class BookingResource extends JsonResource
             'can_cancel' => $this->canBeCancelled(),
             'can_review' => $this->canBeReviewed(),
             'patient' => new UserResource($this->whenLoaded('user')),
+            'child' => ChildResource::make($this->whenLoaded('child')),
             'doctor' => new DoctorResource($this->whenLoaded('doctor')),
+            'service' => ServiceResource::make($this->whenLoaded('service')),
             'review' => new ReviewResource($this->whenLoaded('review')),
         ];
     }

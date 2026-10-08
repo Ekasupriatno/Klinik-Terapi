@@ -15,7 +15,10 @@ class Booking extends Model
     protected $fillable = [
         'booking_code',
         'user_id',
+        'child_id',
+        'phone',
         'doctor_id',
+        'service_id',
         'schedule_id',
         'appointment_date',
         'appointment_time',
@@ -37,9 +40,19 @@ class Booking extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function child(): BelongsTo
+    {
+        return $this->belongsTo(Child::class);
+    }
+
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
     }
 
     public function schedule(): BelongsTo
@@ -50,6 +63,16 @@ class Booking extends Model
     public function review(): HasOne
     {
         return $this->hasOne(Review::class);
+    }
+
+    public function sessionNote(): HasOne
+    {
+        return $this->hasOne(SessionNote::class);
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
     }
 
     public function canBeCancelled(): bool

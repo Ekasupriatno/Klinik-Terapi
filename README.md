@@ -1,4 +1,4 @@
-﻿# Website Klinik Terapi & Rehabilitasi Medik
+# Website Klinik Terapi & Rehabilitasi Medik
 
 [![Laravel](https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
@@ -77,6 +77,12 @@ cd frontend
 npm run dev
 ```
 
+**Terminal 3 - Background image processing:**
+```bash
+cd backend
+php artisan queue:work
+```
+
 Buka browser ke: http://localhost:5173
 
 ---
@@ -85,10 +91,12 @@ Buka browser ke: http://localhost:5173
 
 | Peran         | Email                     | Kata Sandi   | Akses                           |
 |---------------|---------------------------|--------------|---------------------------------|
-| Administrator | admin@klinikterapi.com    | admin12345   | Dashboard Admin, kelola dokter  |
-| Pasien Demo   | pasien@gmail.com          | pasien12345  | Booking, riwayat, ulasan        |
+| Administrator | admin@klinikterapi.com    | AdminKlinik!2026 | Dashboard Admin, kelola dokter  |
+| Pasien Demo   | pasien@gmail.com          | PasienDemo!2026 | Booking, riwayat, ulasan        |
 
 *Catatan: Halaman login dilengkapi tombol 1-klik untuk mengisi akun demo secara otomatis.*
+
+Kata sandi pendaftaran harus minimal 12 karakter serta memuat huruf besar, huruf kecil, angka, dan simbol. Login dibatasi maksimal 5 percobaan per kombinasi akun/IP setiap menit (serta 20 percobaan per IP per menit).
 
 ---
 
@@ -127,20 +135,24 @@ Klinik_terapi/
 ## Fitur Utama
 
 **Pasien:**
-- Katalog dan pencarian dokter berdasarkan spesialisasi terapi
+- Katalog dan pencarian dokter berdasarkan spesialisasi terapi1
 - Pemilihan slot waktu dinamis (real-time availability per tanggal)
-- Wizard booking 4-langkah (pilih dokter, tanggal/slot, keluhan, konfirmasi)
+- Wizard booking 4-langkah (pilih dokter, tanggal/slot, keluhan, nomor WhatsApp/telepon, konfirmasi)
 - Riwayat reservasi dengan filter status (Aktif / Selesai / Dibatalkan)
-- Pembatalan mandiri dengan alasan
+- Pembatalan mandiri dengan alasan pembatalan
 - Rating bintang & ulasan dokter setelah sesi selesai
 - Notifikasi WhatsApp otomatis berisi detail booking
 
 **Administrator:**
-- Dashboard metrik operasional harian
-- Approval/penolakan booking pasien
-- Pencatatan hasil terapi & catatan medis
-- Manajemen data dokter (tambah, edit, hapus)
-- Konfigurasi shift jam praktek per hari
+- **Dashboard Metrik Operasional Real-time** (Total Pasien, Dokter Aktif, Total Booking, Menunggu ACC, Reservasi Hari Ini, Selesai)
+- **Manajemen & CRUD Lengkap Reservasi Pasien**:
+  - **Create**: Tambah reservasi baru langsung dari dashboard (mendukung pasien terdaftar maupun pasien walk-in/baru)
+  - **Read**: Pencarian kode/nama pasien, filter status lengkap, dan modal detail informasi pasien & catatan medis
+  - **Update**: Edit dokter, tanggal, jam konsultasi, nomor telepon, keluhan, catatan medis, dan status reservasi
+  - **Delete**: Hapus data reservasi pasien dengan konfirmasi aman (soft delete)
+  - **Quick Status**: Akses cepat ubah status (Approve, Konsultasi, Selesai dengan catatan dokter, Tolak)
+- **Manajemen Data Dokter (CRUD)**: Tambah dokter baru, upload foto profil, atur SIP, tarif konsultasi, dan status aktif
+- **Konfigurasi Jadwal Jam Praktek (CRUD)**: Kelola shift praktek harian dokter, jam mulai/selesai, dan durasi per sesi
 
 ---
 
@@ -150,24 +162,56 @@ Sistem menggunakan **pessimistic locking** (`lockForUpdate()`) dalam `DB::transa
 
 ---
 
+## Pengujian Otomatis (Automated Testing)
+
+Backend dilengkapi dengan rangkaian Automated Feature Tests menggunakan Pest/PHPUnit:
+
+```bash
+cd backend
+php artisan test
+```
+
+Mencakup **30 pengujian (130 assertions)** untuk:
+- `AdminBookingCrudTest`: Validasi lengkap CRUD reservasi oleh admin (create walk-in & existing, update, delete, daftar pasien).
+- `AdminDoctorCrudTest`: Validasi CRUD dokter beserta upload media foto.
+- `AdminScheduleCrudTest`: Validasi jam kerja dokter dan proteksi format waktu.
+- `BookingWithPhoneTest`: Validasi zero double-booking, nomor telepon, dan status flow.
+- `LoginTest` & `AuthenticationSecurityTest`: Proteksi rate limiter dan enkripsi password.
+
+---
+
 ## Dokumentasi API
 
 Base URL: `http://localhost:8000/api`
 
-| Method | Endpoint                                    | Akses    | Deskripsi                        |
-|--------|---------------------------------------------|----------|----------------------------------|
-| POST   | /auth/register                              | Publik   | Daftar akun pasien               |
-| POST   | /auth/login                                 | Publik   | Login dan dapat Bearer token     |
-| GET    | /specializations                            | Publik   | Daftar spesialisasi terapi       |
-| GET    | /doctors                                    | Publik   | Katalog dokter (filter & search) |
-| GET    | /doctors/{id}/available-slots?date=Y-m-d    | Publik   | Slot waktu tersedia              |
-| GET    | /bookings                                   | Auth     | Riwayat booking                  |
-| POST   | /bookings                                   | Pasien   | Buat reservasi baru              |
-| PUT    | /bookings/{id}/cancel                       | Auth     | Batalkan reservasi               |
-| POST   | /reviews                                    | Pasien   | Kirim ulasan dokter              |
-| GET    | /admin/stats                                | Admin    | Statistik operasional            |
-| POST   | /admin/doctors                              | Admin    | Tambah dokter                    |
-| PUT    | /admin/bookings/{id}/status                 | Admin    | Update status booking            |
+| Method | Endpoint                                    | Akses    | Deskripsi                                                 |
+|--------|---------------------------------------------|----------|-----------------------------------------------------------|
+| POST   | /auth/register                              | Publik   | Daftar akun pasien baru                                   |
+| POST   | /auth/login                                 | Publik   | Login dan peroleh Bearer token (rate-limited)             |
+| GET    | /auth/me                                    | Auth     | Ambil data profil pengguna yang sedang login              |
+| POST   | /auth/logout                                | Auth     | Logout dan hapus token aktif                              |
+| GET    | /specializations                            | Publik   | Daftar spesialisasi terapi                                |
+| GET    | /doctors                                    | Publik   | Katalog dokter publik (filter & search)                   |
+| GET    | /doctors/{id}                               | Publik   | Detail profil dokter & jadwal                             |
+| GET    | /doctors/{id}/available-slots?date=Y-m-d    | Publik   | Slot waktu tersedia per tanggal                           |
+| GET    | /bookings                                   | Auth     | Daftar booking (Pasien: milik sendiri; Admin: semua)      |
+| POST   | /bookings                                   | Pasien   | Buat reservasi baru (dengan transaksi & lock)             |
+| GET    | /bookings/{id}                              | Auth     | Detail reservasi tertentu                                 |
+| PUT    | /bookings/{id}/cancel                       | Auth     | Batalkan reservasi dengan alasan                          |
+| POST   | /reviews                                    | Pasien   | Kirim ulasan dan rating bintang dokter                    |
+| GET    | /admin/stats                                | Admin    | Statistik dan ringkasan metrik dashboard admin            |
+| GET    | /admin/patients                             | Admin    | Daftar pasien untuk dropdown admin                        |
+| POST   | /admin/bookings                             | Admin    | Tambah reservasi baru (pasien terdaftar / walk-in)        |
+| PUT    | /admin/bookings/{id}                        | Admin    | Perbarui detail reservasi pasien                          |
+| PUT    | /admin/bookings/{id}/status                 | Admin    | Update status booking & catatan hasil konsultasi          |
+| DELETE | /admin/bookings/{id}                        | Admin    | Hapus data reservasi pasien                               |
+| GET    | /admin/doctors                              | Admin    | Daftar semua dokter (termasuk status nonaktif)            |
+| POST   | /admin/doctors                              | Admin    | Tambah data dokter baru                                   |
+| PUT    | /admin/doctors/{id}                         | Admin    | Perbarui data dokter                                      |
+| DELETE | /admin/doctors/{id}                         | Admin    | Hapus data dokter (soft delete)                           |
+| POST   | /admin/schedules                            | Admin    | Tambah jadwal shift dokter                                |
+| PUT    | /admin/schedules/{id}                       | Admin    | Perbarui jadwal shift dokter                              |
+| DELETE | /admin/schedules/{id}                       | Admin    | Hapus jadwal shift dokter                                 |
 
 ---
 

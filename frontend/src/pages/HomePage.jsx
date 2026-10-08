@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarCheck,
@@ -13,8 +13,20 @@ import {
   CheckCircle2,
   PhoneCall
 } from 'lucide-react';
+import { clinicSettingService } from '../services/api';
 
 export const HomePage = () => {
+  const [whatsappNumber, setWhatsappNumber] = useState('6282235123063');
+
+  useEffect(() => {
+    clinicSettingService.getPublicSettings()
+      .then((res) => {
+        if (res.data?.data?.whatsapp) {
+          setWhatsappNumber(res.data.data.whatsapp.replace(/[^0-9]/g, ''));
+        }
+      })
+      .catch((err) => console.error('Failed to load clinic whatsapp in HomePage:', err));
+  }, []);
   const features = [
     {
       icon: Award,
@@ -65,18 +77,18 @@ export const HomePage = () => {
     <div className="space-y-24 pb-20">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 md:pt-20 bg-gradient-to-b from-brand-50/60 via-white to-slate-50">
+      <section className="relative overflow-hidden pt-12 md:pt-20 bg-gradient-to-b from-brand-50/60 via-white to-orange-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100/80 text-brand-800 text-xs sm:text-sm font-bold tracking-wide">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100/80 text-blue- text-xs sm:text-sm font-bold tracking-wide">
                 <Sparkles className="w-4 h-4 text-brand-600" />
                 <span>Pusat Rehabilitasi & Terapi Medik Terpadu</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                Pulihkan Tubuh Anda, Kembali <span className="text-brand-600">Bergerak Bebas</span> Tanpa Nyeri.
+                Membantu Anak <span className="text-brand-600">Menuju</span> Potensi terbaik nya.
               </h1>
 
               <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -131,7 +143,7 @@ export const HomePage = () => {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-slate-900">Jadwal Praktek Hari Ini</h4>
-                        <p className="text-xs text-slate-500">Pusat Klinik Terapi Utama</p>
+                        <p className="text-xs text-slate-500">Rumah Terapi Alabina</p>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
@@ -165,7 +177,7 @@ export const HomePage = () => {
                     <p className="text-xs font-medium text-brand-200">Punya Pertanyaan Darurat?</p>
                     <p className="text-sm font-bold">Hubungi Customer Service WhatsApp kami sekarang</p>
                     <a
-                      href="https://wa.me/6281234567890?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20tanya%20jadwal"
+                      href={`https://wa.me/${whatsappNumber}?text=Halo%20Admin%20Klinik%20Terapi,%20saya%20ingin%20tanya%20jadwal`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 mt-1 px-4 py-2 rounded-xl bg-white text-brand-800 text-xs font-bold hover:bg-brand-50 transition"

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Activity, Mail, Lock, AlertCircle, ArrowRight, ShieldCheck, User, Hospital, Sparkles } from 'lucide-react';
+import { Activity, Mail, Lock, AlertCircle, ArrowRight, ShieldCheck, User, Hospital, Sparkles, Stethoscope, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -24,6 +25,8 @@ export const LoginPage = () => {
       const user = await login(email, password);
       if (user.role === 'admin') {
         navigate('/admin');
+      } else if (user.role === 'therapist' || user.role === 'doctor') {
+        navigate('/therapist');
       } else {
         navigate(from, { replace: true });
       }
@@ -48,7 +51,7 @@ export const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-brand-50 via-white to-teal-50">
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
         <div className="grid grid-cols-1 lg:grid-cols-2">
-          
+
           {/* Left Side - Visual */}
           <div className="bg-gradient-to-br from-brand-600 to-teal-600 p-8 lg:p-12 flex flex-col justify-between text-white">
             <div className="space-y-6">
@@ -122,10 +125,10 @@ export const LoginPage = () => {
                   <Sparkles className="w-4 h-4 text-amber-600" />
                   <span className="font-bold text-amber-800">Akun Demo (Klik untuk mengisi cepat):</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => fillDemo('admin@klinikterapi.com', 'admin12345')}
+                    onClick={() => fillDemo('admin@klinikterapi.com', 'AdminKlinik!2026')}
                     className="py-2.5 px-3 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold hover:bg-amber-200 transition flex items-center justify-center gap-2"
                   >
                     <ShieldCheck className="w-4 h-4" />
@@ -133,11 +136,19 @@ export const LoginPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => fillDemo('pasien@gmail.com', 'pasien12345')}
+                    onClick={() => fillDemo('pasien@gmail.com', 'PasienDemo!2026')}
                     className="py-2.5 px-3 bg-brand-100 text-brand-900 border border-brand-300 rounded-xl text-xs font-bold hover:bg-brand-200 transition flex items-center justify-center gap-2"
                   >
                     <User className="w-4 h-4" />
                     Pasien
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fillDemo('therapist@klinikterapi.com', 'Therapist!2026')}
+                    className="py-2.5 px-3 bg-teal-100 text-teal-900 border border-teal-300 rounded-xl text-xs font-bold hover:bg-teal-200 transition flex items-center justify-center gap-2"
+                  >
+                    <Stethoscope className="w-4 h-4" />
+                    Terapis
                   </button>
                 </div>
               </div>
@@ -175,12 +186,29 @@ export const LoginPage = () => {
                     <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
                       required
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition"
+                      className="w-full pl-12 pr-12 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                      aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {/* lupa kata sandi */}
+                  <div className="flex justify-end">
+                    <Link
+                      to="/forgot-password"
+                      className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                    >
+                      Lupa kata sandi?
+                    </Link>
                   </div>
                 </div>
 
@@ -194,11 +222,19 @@ export const LoginPage = () => {
                 </button>
               </form>
 
-              <div className="text-center text-sm text-slate-500 pt-2">
-                Belum memiliki akun pasien?{' '}
-                <Link to="/register" className="font-bold text-brand-600 hover:text-brand-700 hover:underline transition">
-                  Daftar Sekarang
-                </Link>
+              <div className="text-center text-sm text-slate-500 pt-2 space-y-2">
+                <div>
+                  Belum memiliki akun pasien?{' '}
+                  <Link to="/register" className="font-bold text-brand-600 hover:text-brand-700 hover:underline transition">
+                    Daftar Sekarang
+                  </Link>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-xs text-slate-400">Dokter atau Terapis baru? </span>
+                  <Link to="/register/doctor" className="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline transition">
+                    Daftar Akun Dokter Praktik &rarr;
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
