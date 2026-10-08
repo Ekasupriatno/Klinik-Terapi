@@ -5,3 +5,19 @@
 
 # Laravel environment
 backend/.env
+
+# Laravel
+backend/vendor/
+backend/storage/logs/
+backend/storage/framework/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+backend/.env
+frontend/.env
+.env
+.env.*
+!.env.example
