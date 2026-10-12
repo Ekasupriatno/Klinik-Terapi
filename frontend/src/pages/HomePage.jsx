@@ -31,7 +31,7 @@ export const HomePage = () => {
     {
       icon: Award,
       title: 'Terapis & Dokter Tersertifikasi',
-      desc: 'Seluruh tenaga medis memiliki Surat Izin Praktik (SIP) resmi dan berpengalaman klinis bertahun-tahun.',
+      desc: 'Seluruh tenaga medis tersertifikasi resmi dan berpengalaman klinis bertahun-tahun.',
     },
     {
       icon: Clock,
@@ -52,24 +52,24 @@ export const HomePage = () => {
 
   const specializations = [
     {
-      title: 'Fisioterapi & Olahraga',
-      desc: 'Pemulihan cedera lutut, robek otot, pasca operasi fraktur, dan pemulihan gerak fungsional tubuh.',
-      tag: 'Paling Populer',
+      title: 'Terapi Okupasi & Wicara',
+      desc: 'Sensori integrasi, kemandirian motorik fisik, stimulasi bahasa & artikulasi bicara anak serta dewasa.',
+      tag: 'Layanan Utama',
     },
     {
-      title: 'Terapi Tulang Belakang (Spine)',
-      desc: 'Penanganan saraf kejepit (HNP), koreksi postur skoliosis, dan nyeri leher kronis tanpa operasi.',
-      tag: 'Terapi Unggulan',
+      title: 'Orthopedagog (Pendidikan Khusus)',
+      desc: 'Pendampingan khusus hambatan belajar, konsentrasi, dan bimbingan akademik adaptif terarah.',
+      tag: 'Pendidikan Adaptif',
     },
     {
-      title: 'Rehabilitasi Stroke & Saraf',
-      desc: 'Latihan motorik terpandu untuk mengembalikan kemandirian berjalan, bicara, dan beraktivitas.',
-      tag: 'Medik Terpadu',
+      title: 'Konseling & Psikologi',
+      desc: 'Konseling psikologis individual pasien & dewasa, konseling pasangan, serta dukungan kesehatan mental.',
+      tag: 'Konseling Terpadu',
     },
     {
-      title: 'Akupunktur Medis & Nyeri',
-      desc: 'Pereda nyeri sendi, migrain berkepanjangan, bell\'s palsy, dan insomnia dengan jarum steril.',
-      tag: 'Holistik Medis',
+      title: 'Psikotes & Asesmen Tumbuh Kembang',
+      desc: 'Pengukuran IQ, tes minat bakat, kesiapan masuk SD, brain assessment, dan skrining tumbuh kembang.',
+      tag: 'Asesmen Lengkap',
     },
   ];
 
@@ -82,13 +82,13 @@ export const HomePage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100/80 text-blue- text-xs sm:text-sm font-bold tracking-wide">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100/80 text-brand-800 text-xs sm:text-sm font-bold tracking-wide">
                 <Sparkles className="w-4 h-4 text-brand-600" />
                 <span>Pusat Rehabilitasi & Terapi Medik Terpadu</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                Membantu Anak <span className="text-brand-600">Menuju</span> Potensi terbaik nya.
+                Membantu Pasien <span className="text-brand-600">Menuju</span> Potensi terbaiknya.
               </h1>
 
               <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">

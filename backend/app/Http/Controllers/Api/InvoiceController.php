@@ -14,7 +14,7 @@ class InvoiceController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Invoice::with('booking.child', 'child.guardian.user', 'guardian.user', 'payments');
+        $query = Invoice::with('booking.patient', 'patient.guardian.user', 'guardian.user', 'payments');
 
         if ($request->guardian_id) {
             $query->where('guardian_id', $request->guardian_id);
@@ -40,7 +40,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): InvoiceResource
     {
-        $invoice->load('booking.child.guardian', 'child.guardian.user', 'guardian.user', 'payments');
+        $invoice->load('booking.patient.guardian', 'patient.guardian.user', 'guardian.user', 'payments');
         return new InvoiceResource($invoice);
     }
 
@@ -48,7 +48,7 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'booking_id' => 'nullable|exists:bookings,id',
-            'child_id' => 'nullable|exists:children,id',
+            'patient_id' => 'nullable|exists:patients,id',
             'guardian_id' => 'nullable|exists:guardians,id',
             'subtotal' => 'required|numeric|min:0',
             'discount_amount' => 'sometimes|numeric|min:0',
@@ -66,7 +66,7 @@ class InvoiceController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Invoice berhasil dibuat.',
-            'data' => new InvoiceResource($invoice->load('booking', 'child', 'guardian')),
+            'data' => new InvoiceResource($invoice->load('booking', 'patient', 'guardian')),
         ], 201);
     }
 
@@ -91,7 +91,7 @@ class InvoiceController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Invoice berhasil diperbarui.',
-            'data' => new InvoiceResource($invoice->load('booking', 'child', 'guardian')),
+            'data' => new InvoiceResource($invoice->load('booking', 'patient', 'guardian')),
         ]);
     }
 

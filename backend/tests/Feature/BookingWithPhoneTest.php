@@ -27,7 +27,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/009',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -58,7 +57,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/010',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -95,7 +93,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/007',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -130,7 +127,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/008',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -161,7 +157,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/002',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -192,7 +187,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/003',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -223,7 +217,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/004',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -254,7 +247,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/005',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -285,7 +277,6 @@ class BookingWithPhoneTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/006',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,

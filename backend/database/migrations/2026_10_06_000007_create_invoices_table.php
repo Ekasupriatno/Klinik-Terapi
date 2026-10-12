@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('invoice_number', 32)->unique();
             $table->foreignId('booking_id')->nullable()->constrained('bookings')->nullOnDelete();
-            $table->foreignId('child_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('patient_id')->nullable()->constrained('patients')->nullOnDelete();
             $table->foreignId('guardian_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);

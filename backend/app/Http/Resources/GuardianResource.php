@@ -17,8 +17,8 @@ class GuardianResource extends JsonResource
             'address' => $this->address,
             'emergency_contact' => $this->emergency_contact,
             'emergency_phone' => $this->emergency_phone,
-            'relationship_to_child' => $this->relationship_to_child,
-            'children' => ChildResource::collection($this->whenLoaded('children')),
+            'relationship_to_patient' => $this->relationship_to_patient,
+            'patients' => PatientResource::collection($this->whenLoaded('patients')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

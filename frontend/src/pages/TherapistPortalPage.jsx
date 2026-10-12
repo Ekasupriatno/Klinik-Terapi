@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notificationService, therapistService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { formatLocalDate } from '../utils/dateUtils';
 import {
   Activity,
   Calendar,
@@ -21,7 +23,10 @@ import {
   Share2,
   Loader2,
   LogOut,
-  Bell
+  Bell,
+  CheckCheck,
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 
 export const TherapistPortalPage = () => {
@@ -39,17 +44,48 @@ export const TherapistPortalPage = () => {
     navigate('/login');
   };
 
-  const handleNotificationClick = async (notification) => {
-    if (notification.read_at) return;
+  const {
+    notifications,
+    unreadCount: unreadNotificationCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAllNotifications,
+    fetchNotifications,
+  } = useNotifications();
 
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  // Close notifications dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handleNotificationClick = async (notification) => {
     try {
-      await notificationService.markAsRead(notification.id);
-      setNotifications((current) => current.map((item) => (
-        item.id === notification.id ? { ...item, read_at: new Date().toISOString() } : item
-      )));
-      setUnreadNotificationCount((count) => Math.max(0, count - 1));
+      if (!notification.read_at) {
+        await markAsRead(notification.id);
+      }
     } catch (err) {
       console.error('Failed to mark doctor notification as read:', err);
+    }
+
+    setNotificationsOpen(false);
+
+    // Auto-refresh active tab data
+    if (activeTab === 'dashboard') {
+      fetchDashboard();
+    } else if (activeTab === 'calendar') {
+      fetchCalendar();
+    } else {
+      handleTabChange('dashboard');
     }
   };
 
@@ -59,9 +95,6 @@ export const TherapistPortalPage = () => {
   const [dashData, setDashData] = useState(null);
   const [loadingDash, setLoadingDash] = useState(false);
   const [dashboardError, setDashboardError] = useState('');
-  const [notifications, setNotifications] = useState([]);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // ==============================
   // PATIENTS STATE
@@ -80,6 +113,7 @@ export const TherapistPortalPage = () => {
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [savingNote, setSavingNote] = useState(false);
+  const [noteFormError, setNoteFormError] = useState('');
   const [viewingNoteDetail, setViewingNoteDetail] = useState(null);
 
   const [noteForm, setNoteForm] = useState({
@@ -112,29 +146,36 @@ export const TherapistPortalPage = () => {
     }
   }, [activeTab, noteStatusFilter, currentMonth]);
 
+  // Real-time synchronization: Auto-refresh data when notification-refresh event triggers
   useEffect(() => {
-    let active = true;
-    const fetchNotifications = async () => {
-      try {
-        const response = await notificationService.getAll();
-        if (active && response.data?.success) {
-          setNotifications(response.data.data || []);
-          setUnreadNotificationCount(response.data.unread_count || 0);
-        }
-      } catch (err) {
-        if (active) {
-          console.error('Failed to load doctor notifications:', err);
-        }
+    const handleAutoRefresh = () => {
+      if (activeTab === 'dashboard') {
+        fetchDashboard();
+      } else if (activeTab === 'calendar') {
+        fetchCalendar();
       }
     };
 
-    fetchNotifications();
-    const intervalId = window.setInterval(fetchNotifications, 30000);
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-    };
-  }, []);
+    window.addEventListener('notification-refresh', handleAutoRefresh);
+    return () => window.removeEventListener('notification-refresh', handleAutoRefresh);
+  }, [activeTab]);
+
+  // Periodic background refresh for dashboard and calendar (every 10 seconds when tab is active)
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        if (activeTab === 'dashboard') {
+          fetchDashboard();
+        } else if (activeTab === 'calendar') {
+          fetchCalendar();
+        }
+      }
+    }, 10000);
+
+    return () => window.clearInterval(interval);
+  }, [activeTab, currentMonth]);
+
+
 
   // FETCH METHODS
   const fetchDashboard = async () => {
@@ -186,8 +227,8 @@ export const TherapistPortalPage = () => {
       setLoadingCalendar(true);
       const y = currentMonth.getFullYear();
       const m = currentMonth.getMonth();
-      const start = new Date(y, m, 1).toISOString().split('T')[0];
-      const end = new Date(y, m + 1, 0).toISOString().split('T')[0];
+      const start = formatLocalDate(new Date(y, m, 1));
+      const end = formatLocalDate(new Date(y, m + 1, 0));
       const res = await therapistService.getCalendar({ start_date: start, end_date: end });
       const list = res.data?.data || res.data || [];
       setCalendarAppointments(Array.isArray(list) ? list : []);
@@ -201,6 +242,7 @@ export const TherapistPortalPage = () => {
   // NOTE ACTIONS
   const handleOpenAddNote = (bookingId = '') => {
     setEditingNote(null);
+    setNoteFormError('');
     setNoteForm({
       booking_id: bookingId || (dashData?.today_appointments?.[0]?.id || ''),
       note: '',
@@ -216,6 +258,7 @@ export const TherapistPortalPage = () => {
 
   const handleOpenEditNote = (note) => {
     setEditingNote(note);
+    setNoteFormError('');
     setNoteForm({
       booking_id: note.booking_id || '',
       note: note.note || '',
@@ -232,6 +275,7 @@ export const TherapistPortalPage = () => {
   const handleSaveNote = async (e) => {
     e.preventDefault();
     setSavingNote(true);
+    setNoteFormError('');
     try {
       if (editingNote) {
         await therapistService.updateSessionNote(editingNote.id, noteForm);
@@ -242,7 +286,7 @@ export const TherapistPortalPage = () => {
       fetchSessionNotes();
       if (activeTab === 'dashboard') fetchDashboard();
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan catatan sesi.');
+      setNoteFormError(err.response?.data?.message || 'Gagal menyimpan catatan sesi.');
     } finally {
       setSavingNote(false);
     }
@@ -274,59 +318,131 @@ export const TherapistPortalPage = () => {
               <p className="text-sm font-bold text-slate-900">{user?.name}</p>
               <p className="text-xs text-slate-500">Dokter / Terapis</p>
             </div>
-            <div className="relative">
+            <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => setNotificationsOpen((open) => !open)}
-                className="relative rounded-xl border border-slate-200 p-2.5 text-slate-600 transition hover:bg-teal-50 hover:text-teal-800"
+                onClick={() => {
+                  setNotificationsOpen((open) => !open);
+                  if (!notificationsOpen) fetchNotifications();
+                }}
+                className={`relative rounded-xl border p-2.5 transition flex items-center justify-center cursor-pointer ${
+                  unreadNotificationCount > 0
+                    ? 'bg-teal-600 text-white border-teal-500 hover:bg-teal-700 shadow-sm ring-2 ring-teal-500/20'
+                    : 'border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800 bg-white'
+                }`}
                 aria-label={`Notifikasi${unreadNotificationCount ? `, ${unreadNotificationCount} belum dibaca` : ''}`}
                 aria-expanded={notificationsOpen}
               >
-                <Bell className="h-5 w-5" />
+                <Bell className={`h-5 w-5 ${unreadNotificationCount > 0 ? 'animate-bounce text-white' : ''}`} />
                 {unreadNotificationCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white shadow-xs">
                     {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
                   </span>
                 )}
               </button>
               {notificationsOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                    <h2 className="text-sm font-bold text-slate-800">Notifikasi Reservasi</h2>
-                    {unreadNotificationCount > 0 && (
-                      <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-bold text-teal-800">
-                        {unreadNotificationCount} baru
-                      </span>
-                    )}
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-slate-800">Notifikasi Reservasi</h2>
+                      {unreadNotificationCount > 0 && (
+                        <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-800">
+                          {unreadNotificationCount} baru
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => fetchNotifications(true)}
+                        className="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/60 transition"
+                        title="Segarkan notifikasi"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      {unreadNotificationCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => markAllAsRead()}
+                          className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 transition text-[11px] font-bold flex items-center gap-1"
+                          title="Tandai semua dibaca"
+                        >
+                          <CheckCheck className="w-3 h-3" />
+                          <span>Tandai Dibaca</span>
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => clearAllNotifications()}
+                          className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition text-[11px] font-bold flex items-center gap-1"
+                          title="Hapus semua notifikasi"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Hapus</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {notifications.length ? (
                     <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
                       {notifications.map((notification) => (
-                        <button
+                        <div
                           key={notification.id}
-                          type="button"
-                          onClick={() => handleNotificationClick(notification)}
-                          className={`w-full px-4 py-3 text-left transition hover:bg-slate-50 ${
-                            notification.read_at ? 'bg-white' : 'bg-teal-50/60'
+                          className={`group relative flex items-start justify-between gap-3 px-4 py-3 hover:bg-slate-50 transition cursor-pointer ${
+                            notification.read_at ? 'bg-white' : 'bg-teal-50/70'
                           }`}
                         >
-                          <span className="block text-xs font-bold text-slate-800">
-                            {notification.data?.title || 'Notifikasi'}
-                          </span>
-                          <span className="mt-1 block text-xs text-slate-600">
-                            {notification.data?.message}
-                          </span>
-                          {notification.data?.appointment_date && (
-                            <span className="mt-1 block text-[10px] text-slate-500">
-                              {notification.data?.booking_code ? `${notification.data.booking_code} · ` : ''}
-                              {new Date(`${notification.data.appointment_date}T${notification.data.appointment_time || '00:00'}`).toLocaleString('id-ID')}
-                            </span>
-                          )}
-                        </button>
+                          <div
+                            onClick={() => handleNotificationClick(notification)}
+                            className="flex items-start gap-3 flex-1 min-w-0"
+                          >
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5 ${
+                              notification.read_at ? 'bg-slate-100 text-slate-600' : 'bg-teal-100 text-teal-700'
+                            }`}>
+                              📋
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="block text-xs font-bold text-slate-800 truncate">
+                                  {notification.data?.title || 'Notifikasi'}
+                                </span>
+                                {!notification.read_at && (
+                                  <span className="w-2 h-2 rounded-full bg-teal-600 flex-shrink-0" />
+                                )}
+                              </div>
+                              <span className="mt-1 block text-xs text-slate-600 leading-relaxed">
+                                {notification.data?.message}
+                              </span>
+                              {notification.data?.appointment_date && (
+                                <span className="mt-1 block text-[10px] text-slate-500 font-medium">
+                                  {notification.data?.booking_code ? `${notification.data.booking_code} · ` : ''}
+                                  {new Date(`${notification.data.appointment_date}T${notification.data.appointment_time || '00:00'}`).toLocaleString('id-ID')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(notification.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition shrink-0"
+                            title="Hapus notifikasi ini"
+                            aria-label="Hapus notifikasi"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="px-4 py-6 text-center text-xs text-slate-500">Belum ada notifikasi reservasi.</p>
+                    <div className="px-4 py-8 text-center text-xs text-slate-500 space-y-1">
+                      <p className="font-semibold text-slate-700">Belum ada notifikasi reservasi.</p>
+                      <p className="text-[11px] text-slate-400">Pemberitahuan booking pasien baru akan langsung muncul di sini secara real-time.</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -344,53 +460,53 @@ export const TherapistPortalPage = () => {
 
       <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-1.5 flex gap-1 mb-8 overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-1.5 grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2 mb-8">
           <button
             onClick={() => handleTabChange('dashboard')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'dashboard'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
             }`}
           >
-            <Activity className="w-4 h-4" />
-            <span>Dashboard Praktik</span>
+            <Activity className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Dashboard Praktik</span>
           </button>
 
           <button
             onClick={() => handleTabChange('patients')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'patients'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>Pasien Saya</span>
+            <Users className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Pasien Saya</span>
           </button>
 
           <button
             onClick={() => handleTabChange('session-notes')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'session-notes'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Catatan Sesi (Notes)</span>
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Catatan Sesi (Notes)</span>
           </button>
 
           <button
             onClick={() => handleTabChange('calendar')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'calendar'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span>Kalender Jadwal</span>
+            <Calendar className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Kalender Jadwal</span>
           </button>
         </div>
 
@@ -527,7 +643,7 @@ export const TherapistPortalPage = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-slate-900 text-base">
-                              {apt.child?.name || 'Pasien Buah Hati'}
+                              {apt.patient?.name || 'Pasien'}
                             </h4>
                             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize">
                               {apt.status_label || apt.status}
@@ -596,7 +712,7 @@ export const TherapistPortalPage = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-slate-900">
-                            {appointment.child?.name || 'Pasien'}
+                            {appointment.patient?.name || 'Pasien'}
                           </p>
                           <p className="mt-0.5 truncate text-xs text-slate-500">
                             {appointment.service?.name || 'Sesi terapi'}
@@ -621,16 +737,16 @@ export const TherapistPortalPage = () => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Pasien Anak yang Ditangani</h3>
+                <h3 className="text-lg font-bold text-slate-900">Pasien yang Ditangani</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Daftar anak dan orang tua yang terdaftar dalam sesi terapi Anda.
+                  Daftar pasien dan orang tua/wali yang terdaftar dalam sesi terapi Anda.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 max-w-xs w-full">
                 <input
                   type="text"
-                  placeholder="Cari nama pasien anak..."
+                  placeholder="Cari nama pasien..."
                   value={searchPatient}
                   onChange={(e) => setSearchPatient(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && fetchPatients()}
@@ -652,14 +768,14 @@ export const TherapistPortalPage = () => {
                 <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h4 className="text-base font-bold text-slate-800">Belum Ada Pasien</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Belum ada pasien anak yang terdaftar pada jadwal Anda.
+                  Belum ada pasien yang terdaftar pada jadwal Anda.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {patients.map((b) => {
-                  const child = b.child;
-                  const guardian = child?.guardian;
+                  const patient = b.patient;
+                  const guardian = patient?.guardian;
                   return (
                     <div
                       key={b.id}
@@ -667,14 +783,14 @@ export const TherapistPortalPage = () => {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-lg">
-                          {child?.name ? child.name.charAt(0).toUpperCase() : 'P'}
+                          {patient?.name ? patient.name.charAt(0).toUpperCase() : 'P'}
                         </div>
                         <div>
                           <h4 className="font-bold text-slate-900 text-base">
-                            {child?.name || 'Pasien Buah Hati'}
+                            {patient?.name || 'Pasien'}
                           </h4>
                           <span className="text-xs text-slate-500">
-                            {child?.gender === 'female' ? '👧 Perempuan' : '👦 Laki-laki'}
+                            {patient?.gender === 'female' ? '👧 Perempuan' : '👦 Laki-laki'}
                           </span>
                         </div>
                       </div>
@@ -690,9 +806,9 @@ export const TherapistPortalPage = () => {
                           <span className="text-slate-400">Layanan Terakhir:</span>{' '}
                           <span className="font-semibold text-slate-800">{b.service?.name || '-'}</span>
                         </div>
-                        {child?.medical_history && (
+                        {patient?.medical_history && (
                           <div className="text-slate-500 line-clamp-2 pt-1">
-                            <span className="font-medium text-slate-600">Riwayat:</span> {child.medical_history}
+                            <span className="font-medium text-slate-600">Riwayat:</span> {patient.medical_history}
                           </div>
                         )}
                       </div>
@@ -722,7 +838,7 @@ export const TherapistPortalPage = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Catatan Rekam Sesi Klinis</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Dokumentasi intervensi, respon motorik/bahasa anak, dan evaluasi rencana pertemuan berikutnya.
+                  Dokumentasi intervensi, respon terapi pasien, dan evaluasi rencana pertemuan berikutnya.
                 </p>
               </div>
 
@@ -773,7 +889,7 @@ export const TherapistPortalPage = () => {
                             {note.status === 'completed' ? 'Selesai' : 'Draft'}
                           </span>
                           <h4 className="font-bold text-slate-900 text-base">
-                            {note.booking?.child?.name || 'Pasien Anak'}
+                            {note.booking?.patient?.name || 'Pasien'}
                           </h4>
                         </div>
 
@@ -892,7 +1008,7 @@ export const TherapistPortalPage = () => {
                         </div>
                         <div>
                           <h4 className="font-bold text-slate-900 text-sm">
-                            {apt.child?.name || 'Pasien Anak'}
+                            {apt.patient?.name || 'Pasien'}
                           </h4>
                           <span className="text-xs text-slate-500">
                             Pukul {apt.appointment_time} WIB • {apt.service?.name || 'Terapi Spesialis'}
@@ -937,6 +1053,12 @@ export const TherapistPortalPage = () => {
             </div>
 
             <form onSubmit={handleSaveNote} className="space-y-4">
+              {noteFormError && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{noteFormError}</span>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Catatan Umum / Ringkasan Sesi *
@@ -1078,7 +1200,7 @@ export const TherapistPortalPage = () => {
                   {viewingNoteDetail.status}
                 </span>
                 <h3 className="text-xl font-bold text-slate-900">
-                  {viewingNoteDetail.booking?.child?.name || 'Pasien Buah Hati'}
+                  {viewingNoteDetail.booking?.patient?.name || 'Pasien'}
                 </h3>
               </div>
               <button

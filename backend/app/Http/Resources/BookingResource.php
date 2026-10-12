@@ -36,8 +36,12 @@ class BookingResource extends JsonResource
             'created_at' => $this->created_at?->toISOString(),
             'can_cancel' => $this->canBeCancelled(),
             'can_review' => $this->canBeReviewed(),
-            'patient' => new UserResource($this->whenLoaded('user')),
-            'child' => ChildResource::make($this->whenLoaded('child')),
+            'user' => new UserResource($this->whenLoaded('user')),
+            'patient_user' => new UserResource($this->whenLoaded('user')),
+            'patient_record' => PatientResource::make($this->whenLoaded('patient')),
+            'patient' => $this->relationLoaded('patient') && $this->patient
+                ? PatientResource::make($this->patient)
+                : new UserResource($this->whenLoaded('user')),
             'doctor' => new DoctorResource($this->whenLoaded('doctor')),
             'service' => ServiceResource::make($this->whenLoaded('service')),
             'review' => new ReviewResource($this->whenLoaded('review')),

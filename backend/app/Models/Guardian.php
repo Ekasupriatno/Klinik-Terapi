@@ -17,7 +17,7 @@ class Guardian extends Model
         'address',
         'emergency_contact',
         'emergency_phone',
-        'relationship_to_child',
+        'relationship_to_patient',
     ];
 
     protected $casts = [
@@ -29,9 +29,9 @@ class Guardian extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function children(): HasMany
+    public function patients(): HasMany
     {
-        return $this->hasMany(Child::class);
+        return $this->hasMany(Patient::class);
     }
 
     public function invoices(): HasMany

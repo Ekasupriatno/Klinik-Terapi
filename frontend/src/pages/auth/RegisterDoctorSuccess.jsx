@@ -14,7 +14,6 @@ export const RegisterDoctorSuccess = () => {
   const location = useLocation();
   const doctorName = location.state?.doctorName || 'Dokter';
   const doctorEmail = location.state?.doctorEmail || '';
-  const licenseNumber = location.state?.licenseNumber || '';
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-brand-50/30 to-teal-50/20">
@@ -65,11 +64,6 @@ export const RegisterDoctorSuccess = () => {
                 Silakan cek kotak masuk atau folder spam di email <strong>{doctorEmail || 'Anda'}</strong> untuk melakukan <strong>verifikasi email</strong>.
               </span>
             </p>
-            {licenseNumber && (
-              <p className="pt-1 text-[11px] text-amber-800/80">
-                Nomor Lisensi yang diregister: <code className="font-mono font-bold bg-amber-100/70 px-1.5 py-0.5 rounded">{licenseNumber}</code>
-              </p>
-            )}
           </div>
         </div>
 

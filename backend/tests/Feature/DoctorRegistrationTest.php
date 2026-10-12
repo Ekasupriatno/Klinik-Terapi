@@ -30,7 +30,6 @@ class DoctorRegistrationTest extends TestCase
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
             'specialization' => 'Psikologi Anak',
-            'license_number' => 'SIPP-123456',
             'phone' => '081234567890',
             'gender' => 'male',
             'birth_date' => '1990-01-10',
@@ -65,7 +64,7 @@ class DoctorRegistrationTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('doctors', [
-            'license_number' => 'SIPP-123456',
+            'name' => 'Dr. Budi Santoso, Sp.A',
             'status' => 'pending',
             'is_active' => false,
         ]);
@@ -137,7 +136,7 @@ class DoctorRegistrationTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonPath('data.status', 'pending');
 
-        $doctor = Doctor::where('license_number', 'SIPP-123456')->first();
+        $doctor = Doctor::where('name', 'Dr. Budi Santoso, Sp.A')->first();
         $this->assertNotNull($doctor);
         $this->assertEquals('pending', $doctor->status);
         $this->assertFalse((bool) $doctor->is_active);
@@ -148,37 +147,16 @@ class DoctorRegistrationTest extends TestCase
      */
     public function test_user_and_doctor_are_created_in_a_single_transaction(): void
     {
-        // First register a doctor with license number 'SIPP-999999'
-        $userA = User::create([
-            'name' => 'Dokter Pertama',
-            'email' => 'dokter1@klinikterapi.com',
-            'password' => Hash::make('Password123!'),
-            'role' => 'doctor',
-        ]);
-
-        Doctor::create([
-            'user_id' => $userA->id,
-            'name' => 'Dokter Pertama',
-            'license_number' => 'SIPP-999999',
-            'sip_number' => 'SIPP-999999',
-            'status' => 'pending',
-            'is_active' => false,
-        ]);
-
-        // Attempt to register another doctor with a new email but duplicate license_number
-        // We will trigger a database level failure during doctor creation
+        // Validation fails if required field is missing, ensuring rollback
         $data = $this->validDoctorData([
             'email' => 'new.doctor.rollback@klinikterapi.com',
-            'license_number' => 'SIPP-999999', // Will trigger duplicate key error on doctors table
+            'phone' => '', // triggers validation error
         ]);
 
         $response = $this->postJson('/api/auth/register/doctor', $data);
-
-        // Validation catches license_number unique
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['license_number']);
+            ->assertJsonValidationErrors(['phone']);
 
-        // Verify that user was NOT created in database
         $this->assertDatabaseMissing('users', [
             'email' => 'new.doctor.rollback@klinikterapi.com',
         ]);
@@ -200,8 +178,6 @@ class DoctorRegistrationTest extends TestCase
         Doctor::create([
             'user_id' => $user->id,
             'name' => 'Dr. Pending',
-            'license_number' => 'SIPP-PENDING',
-            'sip_number' => 'SIPP-PENDING',
             'status' => 'pending',
             'is_active' => false,
         ]);
@@ -232,8 +208,6 @@ class DoctorRegistrationTest extends TestCase
         Doctor::create([
             'user_id' => $user->id,
             'name' => 'Dr. Approved',
-            'license_number' => 'SIPP-APPROVED',
-            'sip_number' => 'SIPP-APPROVED',
             'status' => 'approved',
             'is_active' => true,
         ]);
@@ -271,8 +245,6 @@ class DoctorRegistrationTest extends TestCase
         Doctor::create([
             'user_id' => $user->id,
             'name' => 'Dr. Rejected',
-            'license_number' => 'SIPP-REJECTED',
-            'sip_number' => 'SIPP-REJECTED',
             'status' => 'rejected',
             'rejection_reason' => 'Dokumen STR kadaluarsa',
             'is_active' => false,
@@ -303,8 +275,6 @@ class DoctorRegistrationTest extends TestCase
         Doctor::create([
             'user_id' => $user->id,
             'name' => 'Dr. Suspended',
-            'license_number' => 'SIPP-SUSPENDED',
-            'sip_number' => 'SIPP-SUSPENDED',
             'status' => 'suspended',
             'is_active' => false,
         ]);
@@ -352,8 +322,6 @@ class DoctorRegistrationTest extends TestCase
         Doctor::create([
             'user_id' => $doctorUser->id,
             'name' => 'Dr. NonAdmin',
-            'license_number' => 'SIPP-NONADMIN',
-            'sip_number' => 'SIPP-NONADMIN',
             'status' => 'approved',
             'is_active' => true,
         ]);
@@ -426,8 +394,6 @@ class DoctorRegistrationTest extends TestCase
         $doctor = Doctor::create([
             'user_id' => $doctorUser->id,
             'name' => 'Dr. Calon',
-            'license_number' => 'SIPP-CALON-01',
-            'sip_number' => 'SIPP-CALON-01',
             'status' => 'pending',
             'is_active' => false,
         ]);

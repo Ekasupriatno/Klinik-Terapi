@@ -24,22 +24,14 @@ return new class extends Migration
                 $table->foreignId('specialization_id')->nullable()->change();
             }
 
-            // Make sip_number nullable so registration using license_number works seamlessly
-            if (Schema::hasColumn('doctors', 'sip_number')) {
-                $table->string('sip_number')->nullable()->change();
-            }
 
             // Add new required & profile fields for doctor registration
             if (!Schema::hasColumn('doctors', 'specialization')) {
                 $table->string('specialization')->nullable()->after('specialization_id');
             }
 
-            if (!Schema::hasColumn('doctors', 'license_number')) {
-                $table->string('license_number')->nullable()->unique()->after('specialization');
-            }
-
             if (!Schema::hasColumn('doctors', 'phone')) {
-                $table->string('phone')->nullable()->after('license_number');
+                $table->string('phone')->nullable()->after('specialization');
             }
 
             if (!Schema::hasColumn('doctors', 'gender')) {
@@ -87,7 +79,6 @@ return new class extends Migration
         Schema::table('doctors', function (Blueprint $table) {
             $columnsToDrop = [
                 'specialization',
-                'license_number',
                 'phone',
                 'gender',
                 'birth_date',

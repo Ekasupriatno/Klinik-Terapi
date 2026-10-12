@@ -34,7 +34,6 @@ export const RegisterDoctor = () => {
     password: '',
     password_confirmation: '',
     specialization: '',
-    license_number: '',
     phone: '',
     gender: 'male',
     birth_date: '',
@@ -58,13 +57,13 @@ export const RegisterDoctor = () => {
 
   // Quick Specialization options
   const specializationsList = [
-    'Psikologi Anak',
+    'Psikologi Klinis',
     'Fisioterapi Pediatrik',
     'Terapi Wicara',
     'Terapi Okupasi',
     'Sensori Integrasi',
     'Rehabilitasi Medik (Sp.KFR)',
-    'Psikiatri Anak & Remaja',
+    'Psikiatri & Rehabilitasi',
   ];
 
   const handleInputChange = (e) => {
@@ -126,7 +125,6 @@ export const RegisterDoctor = () => {
     }
 
     if (!formData.specialization.trim()) errors.specialization = ['Spesialisasi wajib diisi.'];
-    if (!formData.license_number.trim()) errors.license_number = ['Nomor lisensi / SIP / STR wajib diisi.'];
     if (!formData.phone.trim()) errors.phone = ['Nomor telepon wajib diisi.'];
     if (!formData.birth_date) errors.birth_date = ['Tanggal lahir wajib diisi.'];
     if (!formData.address.trim()) errors.address = ['Alamat wajib diisi.'];
@@ -176,7 +174,6 @@ export const RegisterDoctor = () => {
         state: {
           doctorName: formData.name,
           doctorEmail: formData.email,
-          licenseNumber: formData.license_number,
           message: response?.message,
         },
       });
@@ -224,7 +221,7 @@ export const RegisterDoctor = () => {
               <div>
                 <span className="font-bold">Alur Verifikasi Akun:</span>
                 <p className="text-amber-800 mt-0.5">
-                  Setelah mengirim formulir, akun Anda akan berstatus <strong>Pending</strong>. Anda akan menerima notifikasi verifikasi via email dan dapat login setelah Admin Klinik memverifikasi nomor lisensi (SIP/SIPP/STR).
+                  Setelah mengirim formulir, akun Anda akan berstatus <strong>Pending</strong>. Anda akan menerima notifikasi verifikasi via email dan dapat login setelah Admin Klinik memverifikasi dokumen lisensi resmi Anda.
                 </p>
               </div>
             </div>
@@ -400,7 +397,7 @@ export const RegisterDoctor = () => {
                     name="specialization"
                     value={formData.specialization}
                     onChange={handleInputChange}
-                    placeholder="Contoh: Psikologi Anak, Fisioterapi Pediatrik, Terapi Wicara"
+                    placeholder="Contoh: Psikologi Klinis, Fisioterapi Medik, Terapi Wicara"
                     className={`w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border text-sm font-medium transition focus:bg-white focus:outline-none focus:ring-2 ${
                       fieldErrors.specialization
                         ? 'border-rose-300 ring-rose-200 focus:ring-rose-400'
@@ -429,32 +426,6 @@ export const RegisterDoctor = () => {
                 </div>
                 {fieldErrors.specialization && (
                   <p className="text-xs text-rose-600 font-medium">{fieldErrors.specialization[0]}</p>
-                )}
-              </div>
-
-              {/* License Number (SIP / STR) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Nomor Lisensi Praktik (SIP / SIPP / STR) <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <FileText className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    name="license_number"
-                    value={formData.license_number}
-                    onChange={handleInputChange}
-                    placeholder="Contoh: SIPP-123456 atau 446/SIP/2026"
-                    className={`w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border text-sm font-medium transition focus:bg-white focus:outline-none focus:ring-2 ${
-                      fieldErrors.license_number
-                        ? 'border-rose-300 ring-rose-200 focus:ring-rose-400'
-                        : 'border-slate-200 focus:ring-brand-500'
-                    }`}
-                  />
-                </div>
-                <p className="text-[11px] text-slate-400">Nomor ini akan diverifikasi oleh Admin Klinik.</p>
-                {fieldErrors.license_number && (
-                  <p className="text-xs text-rose-600 font-medium">{fieldErrors.license_number[0]}</p>
                 )}
               </div>
 
@@ -497,7 +468,7 @@ export const RegisterDoctor = () => {
                     name="education"
                     value={formData.education}
                     onChange={handleInputChange}
-                    placeholder="Contoh: S2 Magister Psikologi Klinis Anak - Universitas Indonesia"
+                    placeholder="Contoh: S2 Magister Psikologi Klinis - Universitas Indonesia"
                     className={`w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border text-sm font-medium transition focus:bg-white focus:outline-none focus:ring-2 ${
                       fieldErrors.education
                         ? 'border-rose-300 ring-rose-200 focus:ring-rose-400'
@@ -741,7 +712,7 @@ export const RegisterDoctor = () => {
                 className="mt-1 w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500 cursor-pointer"
               />
               <label htmlFor="doctor-agreement" className="text-xs text-slate-600 leading-relaxed cursor-pointer select-none">
-                Saya menyatakan bahwa seluruh data yang saya isikan (termasuk nomor lisensi profesi/SIP/STR dan riwayat pendidikan) adalah <strong>sah, akurat, dan sesuai dengan dokumen resmi</strong>. Saya mengerti bahwa akun saya hanya dapat aktif setelah diverifikasi dan disetujui oleh Administrator Klinik Terapi.
+                Saya menyatakan bahwa seluruh data yang saya isikan (termasuk identitas dan riwayat pendidikan) adalah <strong>sah, akurat, dan sesuai dengan dokumen resmi</strong>. Saya mengerti bahwa akun saya hanya dapat aktif setelah diverifikasi dan disetujui oleh Administrator Klinik Terapi.
               </label>
             </div>
             {fieldErrors.agreement && (

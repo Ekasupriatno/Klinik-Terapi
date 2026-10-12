@@ -160,7 +160,7 @@ export const AdminInvoicesTab = () => {
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
               <tr>
                 <th className="py-3 px-4">No. Invoice</th>
-                <th className="py-3 px-4">Pasien Anak / Wali</th>
+                <th className="py-3 px-4">Pasien / Wali</th>
                 <th className="py-3 px-4">Jatuh Tempo</th>
                 <th className="py-3 px-4">Total</th>
                 <th className="py-3 px-4">Status</th>
@@ -173,7 +173,7 @@ export const AdminInvoicesTab = () => {
                   <td className="py-3 px-4 font-mono font-bold text-brand-700">{inv.invoice_number}</td>
                   <td className="py-3 px-4">
                     <div className="font-bold text-slate-900">
-                      {inv.child?.name || inv.booking?.child?.name || 'Pasien Umum'}
+                      {inv.patient?.name || inv.booking?.patient?.name || 'Pasien Umum'}
                     </div>
                     <div className="text-xs text-slate-400">
                       {inv.guardian?.user?.name || '-'}
@@ -360,7 +360,7 @@ export const AdminInvoicesTab = () => {
             </div>
 
             <div className="space-y-2 text-xs text-slate-700">
-              <div className="flex justify-between"><span className="text-slate-400">Pasien:</span> <span className="font-bold">{detailModal.child?.name || detailModal.booking?.child?.name || '-'}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Pasien:</span> <span className="font-bold">{detailModal.patient?.name || detailModal.booking?.patient?.name || '-'}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Subtotal:</span> <span>{formatCurrency(detailModal.subtotal)}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Diskon:</span> <span>-{formatCurrency(detailModal.discount_amount)}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Pajak:</span> <span>+{formatCurrency(detailModal.tax_amount)}</span></div>

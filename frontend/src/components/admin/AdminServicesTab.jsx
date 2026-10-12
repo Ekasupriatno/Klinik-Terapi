@@ -120,7 +120,7 @@ export const AdminServicesTab = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Manajemen Layanan Terapi</h3>
-          <p className="text-xs text-slate-500">Katalog paket terapi anak, durasi per sesi, dan tarif klinik.</p>
+          <p className="text-xs text-slate-500">Katalog paket layanan terapi, durasi per sesi, dan tarif klinik.</p>
         </div>
 
         <button
@@ -268,7 +268,7 @@ export const AdminServicesTab = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Target Usia Anak</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Target Usia Pasien</label>
                 <input
                   type="text"
                   placeholder="Contoh: 1.5 - 6 Tahun"

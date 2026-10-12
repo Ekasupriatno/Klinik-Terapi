@@ -19,7 +19,7 @@ export const AdminGuardiansTab = () => {
     address: '',
     emergency_contact: '',
     emergency_phone: '',
-    relationship_to_child: 'parent',
+    relationship_to_patient: 'parent',
   });
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export const AdminGuardiansTab = () => {
       address: guardian.address || '',
       emergency_contact: guardian.emergency_contact || '',
       emergency_phone: guardian.emergency_phone || '',
-      relationship_to_child: guardian.relationship_to_child || 'parent',
+      relationship_to_patient: guardian.relationship_to_patient || 'parent',
     });
     setModalOpen(true);
   };
@@ -86,7 +86,7 @@ export const AdminGuardiansTab = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Manajemen Wali & Orang Tua</h3>
-          <p className="text-xs text-slate-500">Kelola kontak, relasi, dan data pendukung wali pasien anak.</p>
+          <p className="text-xs text-slate-500">Kelola kontak, relasi, dan data pendukung wali pasien.</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export const AdminGuardiansTab = () => {
                 <th className="py-3 px-4">Nama Akun / Wali</th>
                 <th className="py-3 px-4">Kontak & WhatsApp</th>
                 <th className="py-3 px-4">Relasi</th>
-                <th className="py-3 px-4">Anak Terdaftar</th>
+                <th className="py-3 px-4">Pasien Terdaftar</th>
                 <th className="py-3 px-4">Alamat</th>
                 <th className="py-3 px-4 text-right">Aksi</th>
               </tr>
@@ -138,11 +138,11 @@ export const AdminGuardiansTab = () => {
                   <td className="py-3 px-4 font-mono text-xs">{g.phone || g.user?.phone || '-'}</td>
                   <td className="py-3 px-4">
                     <span className="px-2.5 py-0.5 rounded-full text-xs bg-brand-50 text-brand-700 font-semibold capitalize">
-                      {g.relationship_to_child || 'Parent'}
+                      {g.relationship_to_patient || 'Parent'}
                     </span>
                   </td>
                   <td className="py-3 px-4 font-semibold text-slate-900">
-                    {g.children?.length || 0} Anak
+                    {g.patients?.length || 0} Pasien
                   </td>
                   <td className="py-3 px-4 text-xs text-slate-500 max-w-xs truncate">
                     {g.address || '-'}
@@ -203,10 +203,10 @@ export const AdminGuardiansTab = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Hubungan dengan Anak</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Hubungan dengan Pasien</label>
                 <select
-                  value={form.relationship_to_child}
-                  onChange={(e) => setForm({ ...form, relationship_to_child: e.target.value })}
+                  value={form.relationship_to_patient || 'parent'}
+                  onChange={(e) => setForm({ ...form, relationship_to_patient: e.target.value })}
                   className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white"
                 >
                   <option value="parent">Orang Tua (Ayah / Ibu)</option>
@@ -279,7 +279,7 @@ export const AdminGuardiansTab = () => {
               <div className="flex justify-between"><span className="text-slate-400">Nama:</span> <span className="font-bold">{detailModal.user?.name}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Email:</span> <span>{detailModal.user?.email}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Telepon:</span> <span>{detailModal.phone}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">Relasi:</span> <span className="capitalize">{detailModal.relationship_to_child}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Relasi:</span> <span className="capitalize">{detailModal.relationship_to_patient}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Kontak Darurat:</span> <span>{detailModal.emergency_contact || '-'} ({detailModal.emergency_phone || '-'})</span></div>
               <div className="pt-2">
                 <span className="text-slate-400 block mb-1">Alamat:</span>

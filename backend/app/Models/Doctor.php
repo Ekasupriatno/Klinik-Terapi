@@ -17,8 +17,6 @@ class Doctor extends Model
         'specialization_id',
         'specialization',
         'name',
-        'license_number',
-        'sip_number',
         'title',
         'phone',
         'gender',
@@ -45,6 +43,15 @@ class Doctor extends Model
     ];
 
     protected $appends = ['average_rating', 'total_reviews', 'profile_photo_url'];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($doctor) {
+            if ($doctor->is_active && empty($doctor->status)) {
+                $doctor->status = 'approved';
+            }
+        });
+    }
 
     public function specialization(): BelongsTo
     {

@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Child extends Model
+class Patient extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'children';
+    protected $table = 'patients';
 
     protected $fillable = [
         'guardian_id',
@@ -36,16 +36,16 @@ class Child extends Model
 
     public function bookings(): HasMany
     {
-        return $this->hasMany(Booking::class);
+        return $this->hasMany(Booking::class, 'patient_id');
     }
 
     public function invoices(): HasMany
     {
-        return $this->hasMany(Invoice::class);
+        return $this->hasMany(Invoice::class, 'patient_id');
     }
 
     public function getAgeAttribute(): int
     {
-        return $this->birth_date->diffInYears(now());
+        return $this->birth_date ? $this->birth_date->diffInYears(now()) : 0;
     }
 }

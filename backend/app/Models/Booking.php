@@ -15,7 +15,7 @@ class Booking extends Model
     protected $fillable = [
         'booking_code',
         'user_id',
-        'child_id',
+        'patient_id',
         'phone',
         'doctor_id',
         'service_id',
@@ -40,9 +40,9 @@ class Booking extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function child(): BelongsTo
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Child::class);
+        return $this->belongsTo(Patient::class, 'patient_id');
     }
 
     public function doctor(): BelongsTo

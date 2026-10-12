@@ -349,6 +349,16 @@ export const AdminSettingsTab = () => {
                   <p className="text-[11px] text-slate-500 leading-relaxed whitespace-pre-line">
                     {formData.address || 'Alamat klinik belum diatur.'}
                   </p>
+                  {formData.address && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-600 hover:text-brand-700 hover:underline pt-0.5"
+                    >
+                      Buka di Google Maps ↗
+                    </a>
+                  )}
                 </div>
               </div>
 

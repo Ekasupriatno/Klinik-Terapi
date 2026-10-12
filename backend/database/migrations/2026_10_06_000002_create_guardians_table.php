@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('emergency_contact')->nullable();
             $table->string('emergency_phone')->nullable();
-            $table->string('relationship_to_child')->default('parent');
+            $table->string('relationship_to_patient')->default('parent');
             $table->timestamps();
         });
     }

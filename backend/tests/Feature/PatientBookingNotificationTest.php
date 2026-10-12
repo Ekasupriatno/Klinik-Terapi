@@ -31,9 +31,9 @@ class PatientBookingNotificationTest extends TestCase
             'user_id' => $therapist->id,
             'specialization_id' => $specialization->id,
             'name' => 'dr. Dokter Tes',
-            'sip_number' => 'SIP/446/2026/NOTIF',
             'experience_years' => 5,
             'consultation_fee' => 200000,
+            'status' => 'approved',
             'is_active' => true,
         ]);
         $service = Service::create([

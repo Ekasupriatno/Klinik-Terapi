@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('specialization_id')->constrained('specializations')->cascadeOnDelete();
             $table->string('name');
-            $table->string('sip_number')->unique();
             $table->string('title')->nullable(); // e.g. "Sp.KFR, M.Biomed"
             $table->unsignedInteger('experience_years')->default(1);
             $table->decimal('consultation_fee', 12, 2)->default(150000);

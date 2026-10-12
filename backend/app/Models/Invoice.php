@@ -15,7 +15,7 @@ class Invoice extends Model
     protected $fillable = [
         'invoice_number',
         'booking_id',
-        'child_id',
+        'patient_id',
         'guardian_id',
         'subtotal',
         'discount_amount',
@@ -41,9 +41,9 @@ class Invoice extends Model
         return $this->belongsTo(Booking::class);
     }
 
-    public function child(): BelongsTo
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Child::class);
+        return $this->belongsTo(Patient::class, 'patient_id');
     }
 
     public function guardian(): BelongsTo

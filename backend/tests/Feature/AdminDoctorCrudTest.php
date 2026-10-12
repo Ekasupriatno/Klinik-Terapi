@@ -29,7 +29,6 @@ class AdminDoctorCrudTest extends TestCase
         $payload = [
             'specialization_id' => $specialization->id,
             'name' => 'dr. Sari Utami',
-            'sip_number' => 'SIP/446/2026/001',
             'title' => 'Sp.KFR',
             'experience_years' => 8,
             'consultation_fee' => 250000,
@@ -47,7 +46,7 @@ class AdminDoctorCrudTest extends TestCase
 
         $this->getJson('/api/admin/doctors')
             ->assertOk()
-            ->assertJsonFragment(['id' => $doctorId, 'sip_number' => 'SIP/446/2026/001']);
+            ->assertJsonFragment(['id' => $doctorId, 'name' => 'dr. Sari Utami']);
 
         $this->putJson("/api/admin/doctors/{$doctorId}", [
             ...$payload,
@@ -79,7 +78,6 @@ class AdminDoctorCrudTest extends TestCase
             'user_id' => $therapist->id,
             'specialization_id' => $specialization->id,
             'name' => 'dr. Akun Tes',
-            'sip_number' => 'SIP/446/2026/ACC',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -104,7 +102,6 @@ class AdminDoctorCrudTest extends TestCase
         $payload = [
             'specialization_id' => $specialization->id,
             'name' => 'dr. Budi Santoso',
-            'sip_number' => 'SIP/446/2026/002',
             'title' => 'Sp.KFR',
             'experience_years' => 5,
             'consultation_fee' => 200000,
@@ -125,7 +122,6 @@ class AdminDoctorCrudTest extends TestCase
         $this->assertDatabaseHas('doctors', [
             'id' => $doctorId,
             'name' => 'dr. Budi Santoso',
-            'sip_number' => 'SIP/446/2026/002',
         ]);
         Storage::disk('public')->assertMissing('doctors/temp/' . basename($doctor->image_url));
     }
@@ -142,7 +138,6 @@ class AdminDoctorCrudTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test',
-            'sip_number' => 'SIP/446/2026/003',
             'experience_years' => 3,
             'consultation_fee' => 150000,
             'image_url' => 'https://example.test/old-image.jpg',
@@ -152,7 +147,6 @@ class AdminDoctorCrudTest extends TestCase
         $updatePayload = [
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Updated',
-            'sip_number' => 'SIP/446/2026/003',
             'experience_years' => 4,
             'consultation_fee' => 180000,
             'image' => \Illuminate\Http\UploadedFile::fake()->image('new-doctor.jpg', 400, 400),
@@ -178,7 +172,6 @@ class AdminDoctorCrudTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test',
-            'sip_number' => 'SIP/446/2026/004',
             'experience_years' => 3,
             'consultation_fee' => 150000,
             'is_active' => true,
@@ -188,7 +181,6 @@ class AdminDoctorCrudTest extends TestCase
             '_method' => 'PUT',
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Updated',
-            'sip_number' => $doctor->sip_number,
             'experience_years' => 4,
             'consultation_fee' => 180000,
             'image' => UploadedFile::fake()->image('updated-doctor.jpg', 400, 400),

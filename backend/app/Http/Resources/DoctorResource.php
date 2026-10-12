@@ -12,7 +12,6 @@ class DoctorResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'sip_number' => $this->sip_number,
             'title' => $this->title,
             'experience_years' => $this->experience_years,
             'consultation_fee' => (float) $this->consultation_fee,
@@ -23,7 +22,6 @@ class DoctorResource extends JsonResource
             'image_medium_url' => $this->image_medium_url,
             'is_active' => $this->is_active,
             'status' => $this->status ?? 'pending',
-            'license_number' => $this->license_number ?? $this->sip_number,
             'phone' => $this->phone,
             'gender' => $this->gender,
             'birth_date' => $this->birth_date?->format('Y-m-d'),

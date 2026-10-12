@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingStoreRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
-use App\Models\Child;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\BookingService;
@@ -30,7 +29,7 @@ class BookingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Booking::with(['doctor.specialization', 'user', 'child', 'service', 'review']);
+        $query = Booking::with(['doctor.specialization', 'user', 'patient', 'service', 'review']);
 
         if (!$user->isAdmin()) {
             $query->where('user_id', $user->id);
@@ -167,6 +166,11 @@ class BookingController extends Controller
         ]);
     }
 
+    public function patientAccounts(): JsonResponse
+    {
+        return $this->patients();
+    }
+
     /**
      * Admin membuat reservasi baru (Walk-in / Manual)
      */
@@ -174,7 +178,7 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'user_id' => ['nullable', 'exists:users,id'],
-            'child_id' => ['nullable', 'exists:children,id'],
+            'patient_id' => ['nullable', 'exists:patients,id'],
             'patient_name' => ['required_without:user_id', 'nullable', 'string', 'max:255'],
             'patient_email' => ['nullable', 'email'],
             'phone' => ['required', 'string', 'max:20'],
@@ -222,11 +226,12 @@ class BookingController extends Controller
 
         $uniqueCode = 'KT-' . Carbon::now()->format('Ym') . '-' . strtoupper(Str::random(5));
         $status = $validated['status'] ?? 'confirmed';
+        $patientId = $validated['patient_id'] ?? null;
 
         $booking = Booking::create([
             'booking_code' => $uniqueCode,
             'user_id' => $user->id,
-            'child_id' => $validated['child_id'] ?? null,
+            'patient_id' => $patientId,
             'phone' => $validated['phone'],
             'doctor_id' => $validated['doctor_id'],
             'service_id' => $validated['service_id'] ?? null,
@@ -243,7 +248,7 @@ class BookingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Reservasi pasien berhasil dibuat.',
-            'data' => new BookingResource($booking->load(['doctor.specialization', 'user'])),
+            'data' => new BookingResource($booking->load(['doctor.specialization', 'user', 'patient'])),
         ], 201);
     }
 
@@ -253,7 +258,7 @@ class BookingController extends Controller
     public function adminUpdate(Request $request, Booking $booking): JsonResponse
     {
         $validated = $request->validate([
-            'child_id' => ['sometimes', 'nullable', 'exists:children,id'],
+            'patient_id' => ['sometimes', 'nullable', 'exists:patients,id'],
             'doctor_id' => ['sometimes', 'exists:doctors,id'],
             'service_id' => ['sometimes', 'nullable', 'exists:services,id'],
             'schedule_id' => ['nullable', 'exists:schedules,id'],
@@ -268,7 +273,9 @@ class BookingController extends Controller
         ]);
 
         $updates = [];
-        if ($request->has('child_id')) $updates['child_id'] = $validated['child_id'];
+        if ($request->has('patient_id')) {
+            $updates['patient_id'] = $validated['patient_id'];
+        }
         if ($request->has('doctor_id')) $updates['doctor_id'] = $validated['doctor_id'];
         if ($request->has('service_id')) $updates['service_id'] = $validated['service_id'];
         if ($request->has('schedule_id')) $updates['schedule_id'] = $validated['schedule_id'];

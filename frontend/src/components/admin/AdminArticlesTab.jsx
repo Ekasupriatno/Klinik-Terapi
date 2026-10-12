@@ -50,7 +50,7 @@ export const AdminArticlesTab = () => {
       category: 'Tumbuh Kembang',
       excerpt: '',
       content: '',
-      tags: 'tumbuh kembang, anak, terapi',
+      tags: 'tumbuh kembang, pasien, terapi',
       is_published: true,
     });
     setModalOpen(true);
@@ -102,7 +102,7 @@ export const AdminArticlesTab = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Manajemen Konten & Artikel (CMS)</h3>
-          <p className="text-xs text-slate-500">Publikasikan panduan orang tua, tips terapi wicara, dan edukasi kesehatan anak.</p>
+          <p className="text-xs text-slate-500">Publikasikan panduan keluarga, tips terapi wicara, dan edukasi kesehatan pasien.</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -214,7 +214,7 @@ export const AdminArticlesTab = () => {
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Misal: Ciri-Ciri Keterlambatan Bicara (Speech Delay) pada Anak Usia 2 Tahun"
+                  placeholder="Misal: Ciri-Ciri Keterlambatan Bicara (Speech Delay) dan Penanganannya"
                   className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900"
                 />
               </div>
@@ -240,7 +240,7 @@ export const AdminArticlesTab = () => {
                     type="text"
                     value={form.tags}
                     onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                    placeholder="speech delay, anak, orang tua"
+                    placeholder="speech delay, terapi, pasien"
                     className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs"
                   />
                 </div>

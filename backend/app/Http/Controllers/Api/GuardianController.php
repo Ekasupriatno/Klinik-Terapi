@@ -14,7 +14,7 @@ class GuardianController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Guardian::with('user', 'children');
+        $query = Guardian::with('user', 'patients');
 
         if ($request->search) {
             $query->whereHas('user', function ($q) use ($request) {
@@ -33,10 +33,10 @@ class GuardianController extends Controller
             $guardian = Guardian::create([
                 'user_id' => $request->user()->id,
                 'phone' => $request->user()->phone ?? '',
-                'relationship_to_child' => 'parent',
+                'relationship_to_patient' => 'parent',
             ]);
         }
-        $guardian->load('user', 'children');
+        $guardian->load('user', 'patients');
         return new GuardianResource($guardian);
     }
 
@@ -47,7 +47,7 @@ class GuardianController extends Controller
             $guardian = Guardian::create([
                 'user_id' => $request->user()->id,
                 'phone' => $request->user()->phone ?? '',
-                'relationship_to_child' => 'parent',
+                'relationship_to_patient' => 'parent',
             ]);
         }
         return $this->update($request, $guardian);
@@ -55,7 +55,7 @@ class GuardianController extends Controller
 
     public function show(Guardian $guardian): GuardianResource
     {
-        $guardian->load('user', 'children');
+        $guardian->load('user', 'patients');
         return new GuardianResource($guardian);
     }
 
@@ -67,15 +67,17 @@ class GuardianController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:255',
             'emergency_phone' => 'nullable|string|max:20',
-            'relationship_to_child' => 'required|string',
+            'relationship_to_patient' => 'nullable|string',
         ]);
+
+        $validated['relationship_to_patient'] = $request->input('relationship_to_patient', 'parent');
 
         $guardian = Guardian::create($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'Data guardian berhasil dibuat.',
-            'data' => new GuardianResource($guardian->load('user')),
+            'data' => new GuardianResource($guardian->load('user', 'patients')),
         ], 201);
     }
 
@@ -86,8 +88,12 @@ class GuardianController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:255',
             'emergency_phone' => 'nullable|string|max:20',
-            'relationship_to_child' => 'sometimes|string',
+            'relationship_to_patient' => 'sometimes|string',
         ]);
+
+        if ($request->has('relationship_to_patient')) {
+            $validated['relationship_to_patient'] = $request->input('relationship_to_patient');
+        }
 
         $guardian->update($validated);
 

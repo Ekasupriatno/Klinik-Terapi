@@ -7,8 +7,8 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
-use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\DoctorController;
+use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\GuardianController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\NotificationController;
@@ -72,7 +72,10 @@ Route::get('/settings', [ClinicSettingController::class, 'show']);
 // ==========================================
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
     Route::put('/notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{notificationId}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications', [NotificationController::class, 'destroyAll']);
 
     // Auth & Profil
     Route::prefix('auth')->group(function () {
@@ -93,11 +96,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/guardian/me', [GuardianController::class, 'me']);
     Route::put('/guardian/me', [GuardianController::class, 'updateMe']);
 
-    // Children routes (for logged-in parents)
-    Route::get('/children', [ChildController::class, 'index']);
-    Route::post('/children', [ChildController::class, 'store']);
-    Route::get('/children/{child}', [ChildController::class, 'show']);
-    Route::put('/children/{child}', [ChildController::class, 'update']);
+    // Patient routes (for logged-in parents)
+    Route::get('/patients', [PatientController::class, 'index']);
+    Route::post('/patients', [PatientController::class, 'store']);
+    Route::get('/patients/{patient}', [PatientController::class, 'show']);
+    Route::put('/patients/{patient}', [PatientController::class, 'update']);
 
     // Invoices (for logged-in parents)
     Route::get('/invoices', [InvoiceController::class, 'index']);
@@ -141,8 +144,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // 3. ADMIN ONLY ROUTES (Khusus Admin)
     // ==========================================
     Route::middleware(IsAdmin::class)->prefix('admin')->group(function () {
-        Route::post('/accounts/admin', [AccountController::class, 'store']);
-        Route::put('/account/password', [AccountController::class, 'changePassword']);
+        Route::post('/accounts/admin', [AccountController::class, 'store'])->middleware('throttle:5,1');
+        Route::put('/account/email', [AccountController::class, 'updateEmail'])->middleware('throttle:5,1');
+        Route::put('/account/password', [AccountController::class, 'changePassword'])->middleware('throttle:5,1');
         // Statistik Dashboard
         Route::get('/stats', [DashboardController::class, 'stats']);
 
@@ -153,8 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/doctors/{id}/reject', [AdminDoctorController::class, 'reject'])->whereNumber('id');
         Route::put('/doctors/{id}/suspend', [AdminDoctorController::class, 'suspend'])->whereNumber('id');
 
-        // Data Pasien untuk Operasional Admin
-        Route::get('/patients', [BookingController::class, 'patients']);
+        // Data Akun Pasien untuk Operasional Admin (Dropdown User Booking)
+        Route::get('/patient-accounts', [BookingController::class, 'patients']);
 
         // Manajemen Dokter
         Route::get('/therapist-accounts', [DoctorController::class, 'therapistAccounts']);
@@ -181,12 +185,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/guardians/{guardian}', [GuardianController::class, 'update']);
         Route::delete('/guardians/{guardian}', [GuardianController::class, 'destroy']);
 
-        // Manajemen Children/Patients
-        Route::get('/children', [ChildController::class, 'index']);
-        Route::get('/children/{child}', [ChildController::class, 'show']);
-        Route::post('/children', [ChildController::class, 'store']);
-        Route::put('/children/{child}', [ChildController::class, 'update']);
-        Route::delete('/children/{child}', [ChildController::class, 'destroy']);
+        // Manajemen Data Pasien (CRUD)
+        Route::get('/patients', [PatientController::class, 'index']);
+        Route::get('/patients/{patient}', [PatientController::class, 'show']);
+        Route::post('/patients', [PatientController::class, 'store']);
+        Route::put('/patients/{patient}', [PatientController::class, 'update']);
+        Route::delete('/patients/{patient}', [PatientController::class, 'destroy']);
 
         // Manajemen Services
         Route::get('/services', [ServiceController::class, 'index']);

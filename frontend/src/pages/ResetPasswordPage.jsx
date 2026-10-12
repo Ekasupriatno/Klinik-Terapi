@@ -115,7 +115,20 @@ export const ResetPasswordPage = () => {
                   required
                   placeholder="nama@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    e.target.setCustomValidity('');
+                  }}
+                  onInvalid={(e) => {
+                    if (e.target.validity.valueMissing) {
+                      e.target.setCustomValidity('Harap isi alamat email Anda.');
+                    } else if (e.target.validity.typeMismatch) {
+                      e.target.setCustomValidity('Format email tidak valid (contoh: nama@email.com).');
+                    } else {
+                      e.target.setCustomValidity('');
+                    }
+                  }}
+                  onInput={(e) => e.target.setCustomValidity('')}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-medium"
                 />
               </div>
@@ -132,7 +145,18 @@ export const ResetPasswordPage = () => {
                   required
                   placeholder="Masukkan token dari email"
                   value={formData.token}
-                  onChange={(e) => setFormData({ ...formData, token: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, token: e.target.value });
+                    e.target.setCustomValidity('');
+                  }}
+                  onInvalid={(e) => {
+                    if (e.target.validity.valueMissing) {
+                      e.target.setCustomValidity('Harap masukkan token reset password.');
+                    } else {
+                      e.target.setCustomValidity('');
+                    }
+                  }}
+                  onInput={(e) => e.target.setCustomValidity('')}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-mono"
                 />
               </div>
@@ -150,7 +174,20 @@ export const ResetPasswordPage = () => {
                   minLength={6}
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    e.target.setCustomValidity('');
+                  }}
+                  onInvalid={(e) => {
+                    if (e.target.validity.valueMissing) {
+                      e.target.setCustomValidity('Harap buat kata sandi baru Anda.');
+                    } else if (e.target.validity.tooShort) {
+                      e.target.setCustomValidity('Kata sandi minimal 6 karakter.');
+                    } else {
+                      e.target.setCustomValidity('');
+                    }
+                  }}
+                  onInput={(e) => e.target.setCustomValidity('')}
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                 />
                 <button
@@ -176,7 +213,20 @@ export const ResetPasswordPage = () => {
                   minLength={6}
                   placeholder="••••••••"
                   value={formData.password_confirmation}
-                  onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password_confirmation: e.target.value });
+                    e.target.setCustomValidity('');
+                  }}
+                  onInvalid={(e) => {
+                    if (e.target.validity.valueMissing) {
+                      e.target.setCustomValidity('Harap masukkan konfirmasi kata sandi baru.');
+                    } else if (e.target.validity.tooShort) {
+                      e.target.setCustomValidity('Konfirmasi kata sandi minimal 6 karakter.');
+                    } else {
+                      e.target.setCustomValidity('');
+                    }
+                  }}
+                  onInput={(e) => e.target.setCustomValidity('')}
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                 />
                 <button

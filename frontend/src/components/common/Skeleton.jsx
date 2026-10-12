@@ -1,17 +1,20 @@
 import React from 'react';
 
 export const DoctorCardSkeleton = () => (
-  <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm animate-pulse flex flex-col md:flex-row gap-6">
-    <div className="w-28 h-28 md:w-32 md:h-32 bg-slate-200 rounded-2xl flex-shrink-0 mx-auto md:mx-0" />
-    <div className="flex-1 space-y-3">
-      <div className="h-5 bg-slate-200 rounded-md w-3/4" />
-      <div className="h-4 bg-slate-100 rounded-md w-1/2" />
-      <div className="h-3 bg-slate-100 rounded-md w-full" />
-      <div className="h-3 bg-slate-100 rounded-md w-5/6" />
-      <div className="flex gap-4 pt-2">
-        <div className="h-8 bg-slate-200 rounded-xl w-28" />
-        <div className="h-8 bg-slate-200 rounded-xl w-32" />
+  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-sm animate-pulse space-y-5">
+    <div className="flex items-start gap-4 sm:gap-5">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-200 rounded-full flex-shrink-0" />
+      <div className="flex-1 space-y-2.5">
+        <div className="h-5 bg-slate-200 rounded-md w-1/2" />
+        <div className="h-4 bg-slate-100 rounded-md w-1/3" />
+        <div className="h-4 bg-slate-100 rounded-md w-2/3" />
+        <div className="h-4 bg-slate-100 rounded-md w-1/4" />
       </div>
+    </div>
+    <div className="grid grid-cols-3 gap-2.5 pt-2">
+      <div className="h-14 bg-slate-100 rounded-2xl w-full" />
+      <div className="h-14 bg-slate-100 rounded-2xl w-full" />
+      <div className="h-14 bg-slate-100 rounded-2xl w-full" />
     </div>
   </div>
 );

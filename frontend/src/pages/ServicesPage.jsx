@@ -80,10 +80,10 @@ export const ServicesPage = () => {
             Layanan Terapi Terpadu & Profesional
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto leading-tight">
-            Program Terapi Tumbuh Kembang Anak Terbaik
+            Program Terapi & Rehabilitasi Medik Terbaik
           </h1>
           <p className="mt-4 text-base sm:text-lg text-teal-50 max-w-2xl mx-auto">
-            Metode terapi klinis terstandar yang disesuaikan dengan kebutuhan unik setiap buah hati, didampingi tim terapis berpengalaman dan penuh kasih.
+            Metode terapi klinis terstandar yang disesuaikan dengan kebutuhan unik setiap pasien, didampingi tim terapis berpengalaman dan penuh kasih.
           </p>
 
           {/* Search Bar */}
@@ -103,8 +103,62 @@ export const ServicesPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {/* Special Promo Announcement Card */}
+        <div className="mb-8 rounded-3xl bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 p-[2px] shadow-lg shadow-rose-500/10">
+          <div className="rounded-[22px] bg-white p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-50 rounded-2xl text-amber-600 shrink-0">
+                <Tag className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-amber-100 text-amber-800 mb-1">
+                  Promo Spesial 20%
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                  Paket Terapi Gelombang Suara (8x Pertemuan) Diskon 20%
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                  Dari <span className="line-through text-slate-400">Rp 3.000.000</span> menjadi{' '}
+                  <span className="font-extrabold text-rose-600 text-sm sm:text-base">Rp 2.400.000</span>.
+                  Syarat & Ketentuan: Follow Instagram{' '}
+                  <a
+                    href="https://www.instagram.com/rumahterapi_alabina"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-rose-600 hover:underline"
+                  >
+                    @rumahterapi_alabina
+                  </a>{' '}
+                  & TikTok{' '}
+                  <a
+                    href="https://www.tiktok.com/@rumahterapi.alabina"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-rose-600 hover:underline"
+                  >
+                    @rumahterapi.alabina
+                  </a>.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const s = services.find((item) => item.name?.toLowerCase().includes('gelombang suara'));
+                if (s) {
+                  navigate(`/booking?service_id=${s.id}`);
+                } else {
+                  navigate('/booking');
+                }
+              }}
+              className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-rose-500/20 transition whitespace-nowrap active:scale-95 text-center"
+            >
+              Klaim Promo Sekarang
+            </button>
+          </div>
+        </div>
+
         {/* Category Pills Filter */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3 sm:p-4 mb-8 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3 sm:p-4 mb-8 flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={() => setSelectedSpec('all')}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
@@ -293,7 +347,7 @@ export const ServicesPage = () => {
                 <div className="p-3 bg-slate-50 rounded-xl">
                   <span className="text-xs text-slate-400 block">Target Usia</span>
                   <span className="text-sm font-bold text-slate-800">
-                    {selectedServiceForModal.age_target || 'Semua Usia Anak'}
+                    {selectedServiceForModal.age_target || 'Semua Usia'}
                   </span>
                 </div>
               </div>

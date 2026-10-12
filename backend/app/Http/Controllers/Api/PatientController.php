@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ChildResource;
-use App\Models\Child;
+use App\Http\Resources\PatientResource;
+use App\Models\Patient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-class ChildController extends Controller
+class PatientController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Child::with('guardian.user');
+        $query = Patient::with('guardian.user');
 
         if ($request->guardian_id) {
             $query->where('guardian_id', $request->guardian_id);
@@ -34,13 +34,13 @@ class ChildController extends Controller
             $query->where('status', $request->status);
         }
 
-        return ChildResource::collection($query->paginate(20));
+        return PatientResource::collection($query->paginate(20));
     }
 
-    public function show(Child $child): ChildResource
+    public function show(Patient $patient): PatientResource
     {
-        $child->load('guardian.user', 'bookings.doctor', 'bookings.service');
-        return new ChildResource($child);
+        $patient->load('guardian.user', 'bookings.doctor', 'bookings.service');
+        return new PatientResource($patient);
     }
 
     public function store(Request $request): JsonResponse
@@ -60,16 +60,16 @@ class ChildController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $child = Child::create($validated);
+        $patient = Patient::create($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'Data anak berhasil dibuat.',
-            'data' => new ChildResource($child->load('guardian.user')),
+            'message' => 'Data pasien berhasil dibuat.',
+            'data' => new PatientResource($patient->load('guardian.user')),
         ], 201);
     }
 
-    public function update(Request $request, Child $child): JsonResponse
+    public function update(Request $request, Patient $patient): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -81,22 +81,22 @@ class ChildController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $child->update($validated);
+        $patient->update($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'Data anak berhasil diperbarui.',
-            'data' => new ChildResource($child->load('guardian.user')),
+            'message' => 'Data pasien berhasil diperbarui.',
+            'data' => new PatientResource($patient->load('guardian.user')),
         ]);
     }
 
-    public function destroy(Child $child): JsonResponse
+    public function destroy(Patient $patient): JsonResponse
     {
-        $child->delete();
+        $patient->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Data anak berhasil dihapus.',
+            'message' => 'Data pasien berhasil dihapus.',
         ]);
     }
 }

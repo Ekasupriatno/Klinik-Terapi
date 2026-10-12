@@ -6,7 +6,9 @@ use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Notifications\AdminNewBookingNotification;
 use App\Notifications\BookingApprovedNotification;
+use App\Notifications\BookingCancelledNotification;
 use App\Notifications\PatientBookingNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +62,7 @@ class BookingService
             $booking = Booking::create([
                 'booking_code' => $uniqueCode,
                 'user_id' => $user->id,
-                'child_id' => $data['child_id'] ?? null,
+                'patient_id' => $data['patient_id'] ?? null,
                 'service_id' => $data['service_id'] ?? null,
                 'phone' => $data['phone'] ?? $user->phone ?? null,
                 'doctor_id' => $doctor->id,
@@ -73,8 +75,14 @@ class BookingService
             ]);
 
             $recipient = $doctor->user;
-            if ($recipient?->role === 'therapist') {
+            if ($recipient && in_array($recipient->role, ['therapist', 'doctor'])) {
                 $recipient->notify(new PatientBookingNotification($booking));
+            }
+
+            // Notify all administrators
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new AdminNewBookingNotification($booking));
             }
 
             return $booking;
@@ -104,7 +112,22 @@ class BookingService
             'cancel_reason' => $reason ?: 'Dibatalkan oleh ' . ($actor->isAdmin() ? 'Admin' : 'Pasien'),
         ]);
 
-        return $booking->fresh();
+        $freshBooking = $booking->fresh();
+
+        // Notify admins if cancelled by patient
+        if (!$actor->isAdmin()) {
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new BookingCancelledNotification($freshBooking, 'patient'));
+            }
+        }
+
+        // Notify doctor if doctor has associated user
+        if ($freshBooking->doctor?->user) {
+            $freshBooking->doctor->user->notify(new BookingCancelledNotification($freshBooking, $actor->role));
+        }
+
+        return $freshBooking;
     }
 
     /**

@@ -105,19 +105,22 @@ export const bookingService = {
   cancel: (id, reason) => api.put(`/bookings/${id}/cancel`, { reason }),
   updateStatus: (id, status, notes) => api.put(`/admin/bookings/${id}/status`, { status, doctor_notes: notes }),
   delete: (id) => api.delete(`/admin/bookings/${id}`),
-  getPatients: () => api.get('/admin/patients'),
+  getPatientAccounts: () => api.get('/admin/patient-accounts'),
+  getPatients: () => api.get('/admin/patient-accounts'),
 };
 
 export const parentService = {
   getProfile: () => api.get('/guardian/me'),
   updateProfile: (data) => api.put('/guardian/me', data),
-  getChildren: (params) => api.get('/children', { params }),
-  getChild: (id) => api.get(`/children/${id}`),
-  createChild: (data) => api.post('/children', data),
-  updateChild: (id, data) => api.put(`/children/${id}`, data),
+  getPatients: (params) => api.get('/patients', { params }),
+  getPatient: (id) => api.get(`/patients/${id}`),
+  createPatient: (data) => api.post('/patients', data),
+  updatePatient: (id, data) => api.put(`/patients/${id}`, data),
   getInvoices: (params) => api.get('/invoices', { params }),
   getInvoice: (id) => api.get(`/invoices/${id}`),
 };
+
+export const patientService = parentService;
 
 export const therapistService = {
   getDashboard: () => api.get('/therapist/dashboard'),
@@ -149,26 +152,30 @@ export const reviewService = {
 };
 
 export const notificationService = {
-  getAll: () => api.get('/notifications'),
+  getAll: (params) => api.get('/notifications', { params }),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/mark-all-read'),
+  delete: (id) => api.delete(`/notifications/${id}`),
+  deleteAll: () => api.delete('/notifications'),
 };
 
 export const adminService = {
   getStats: () => api.get('/admin/stats'),
   createAdminAccount: (data) => api.post('/admin/accounts/admin', data),
   changePassword: (data) => api.put('/admin/account/password', data),
+  updateEmail: (data) => api.put('/admin/account/email', data),
   // Guardians
   getGuardians: (params) => api.get('/admin/guardians', { params }),
   getGuardian: (id) => api.get(`/admin/guardians/${id}`),
   createGuardian: (data) => api.post('/admin/guardians', data),
   updateGuardian: (id, data) => api.put(`/admin/guardians/${id}`, data),
   deleteGuardian: (id) => api.delete(`/admin/guardians/${id}`),
-  // Children
-  getChildren: (params) => api.get('/admin/children', { params }),
-  getChild: (id) => api.get(`/admin/children/${id}`),
-  createChild: (data) => api.post('/admin/children', data),
-  updateChild: (id, data) => api.put(`/admin/children/${id}`, data),
-  deleteChild: (id) => api.delete(`/admin/children/${id}`),
+  // Patients
+  getPatients: (params) => api.get('/admin/patients', { params }),
+  getPatient: (id) => api.get(`/admin/patients/${id}`),
+  createPatient: (data) => api.post('/admin/patients', data),
+  updatePatient: (id, data) => api.put(`/admin/patients/${id}`, data),
+  deletePatient: (id) => api.delete(`/admin/patients/${id}`),
   // Services
   getServices: (params) => api.get('/admin/services', { params }),
   createService: (data) => api.post('/admin/services', data),

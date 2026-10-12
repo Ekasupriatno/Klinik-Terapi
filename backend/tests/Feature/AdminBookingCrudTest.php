@@ -49,7 +49,6 @@ class AdminBookingCrudTest extends TestCase
         return Doctor::create([
             'specialization_id' => $spec->id,
             'name' => 'dr. Handoko, Sp.KFR',
-            'sip_number' => 'SIP/999/2026',
             'title' => 'Sp.KFR',
             'experience_years' => 5,
             'consultation_fee' => 200000,
@@ -65,7 +64,7 @@ class AdminBookingCrudTest extends TestCase
 
         Sanctum::actingAs($admin);
 
-        $response = $this->getJson('/api/admin/patients');
+        $response = $this->getJson('/api/admin/patient-accounts');
         $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonCount(2, 'data');

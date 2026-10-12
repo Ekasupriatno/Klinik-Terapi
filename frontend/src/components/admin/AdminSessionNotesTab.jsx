@@ -67,7 +67,7 @@ export const AdminSessionNotesTab = () => {
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px]">
               <tr>
-                <th className="py-3 px-4">Pasien Anak</th>
+                <th className="py-3 px-4">Pasien</th>
                 <th className="py-3 px-4">Terapis</th>
                 <th className="py-3 px-4">Ringkasan Catatan</th>
                 <th className="py-3 px-4">Status</th>
@@ -80,7 +80,7 @@ export const AdminSessionNotesTab = () => {
               {notes.map((n) => (
                 <tr key={n.id} className="hover:bg-slate-50/70 transition">
                   <td className="py-3 px-4 font-bold text-slate-900">
-                    {n.booking?.child?.name || 'Pasien Buah Hati'}
+                    {n.booking?.patient?.name || 'Pasien'}
                   </td>
                   <td className="py-3 px-4 font-semibold text-slate-700">
                     {n.therapist?.name || '-'}
@@ -144,7 +144,7 @@ export const AdminSessionNotesTab = () => {
               <div>
                 <span className="text-xs font-bold uppercase text-brand-600">{detailModal.status}</span>
                 <h3 className="font-bold text-slate-900 text-base">
-                  {detailModal.booking?.child?.name || 'Pasien Anak'}
+                  {detailModal.booking?.patient?.name || 'Pasien'}
                 </h3>
               </div>
               <button onClick={() => setDetailModal(null)} className="text-slate-400">✕</button>

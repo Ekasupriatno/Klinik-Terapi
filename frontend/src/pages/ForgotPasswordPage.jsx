@@ -87,7 +87,20 @@ export const ForgotPasswordPage = () => {
                   required
                   placeholder="nama@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    e.target.setCustomValidity('');
+                  }}
+                  onInvalid={(e) => {
+                    if (e.target.validity.valueMissing) {
+                      e.target.setCustomValidity('Harap isi alamat email Anda.');
+                    } else if (e.target.validity.typeMismatch) {
+                      e.target.setCustomValidity('Format email tidak valid (contoh: nama@email.com).');
+                    } else {
+                      e.target.setCustomValidity('');
+                    }
+                  }}
+                  onInput={(e) => e.target.setCustomValidity('')}
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-medium"
                 />
               </div>

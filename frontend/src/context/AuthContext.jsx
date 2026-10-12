@@ -93,6 +93,10 @@ export const AuthProvider = ({ children }) => {
     isTherapist: user?.role === 'therapist' || user?.role === 'doctor',
     isParent: user?.role === 'parent' || user?.role === 'patient',
     isPatient: user?.role === 'patient' || user?.role === 'parent',
+    updateUser: (userData) => {
+      localStorage.setItem('auth_user', JSON.stringify(userData));
+      setUser(userData);
+    },
     login,
     register,
     logout,

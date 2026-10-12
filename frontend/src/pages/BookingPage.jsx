@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { doctorService, bookingService, serviceService, parentService, clinicSettingService } from '../services/api';
 import { SlotGridSkeleton } from '../components/common/Skeleton';
+import { formatLocalDate, getMinBookingDate, getMaxBookingDate } from '../utils/dateUtils';
 import {
   Calendar,
   Clock,
@@ -15,31 +17,34 @@ import {
   PhoneCall,
   Sparkles,
   Check,
-  Baby,
   Tag,
   Plus,
-  HeartHandshake
+  HeartHandshake,
+  RotateCcw,
+  X,
+  UserCheck
 } from 'lucide-react';
 
 export const BookingPage = () => {
   const { user, isAuthenticated } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const [clinicWhatsapp, setClinicWhatsapp] = useState('6282235123063');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Stepper Steps:
-  // 1 = Pilih Anak, 2 = Pilih Layanan, 3 = Pilih Dokter, 4 = Tanggal & Slot, 5 = Keluhan & No Telp, 6 = Konfirmasi
+  // 1 = Pilih Pasien, 2 = Pilih Layanan, 3 = Pilih Dokter, 4 = Tanggal & Slot, 5 = Keluhan & No Telp, 6 = Konfirmasi
   const [step, setStep] = useState(1);
 
   // Data Lists
-  const [childrenList, setChildrenList] = useState([]);
+  const [patientsList, setPatientsList] = useState([]);
   const [servicesList, setServicesList] = useState([]);
   const [doctors, setDoctors] = useState([]);
 
   // Selections
-  const [selectedChildId, setSelectedChildId] = useState('');
-  const [selectedChild, setSelectedChild] = useState(null);
-  const [guestChildName, setGuestChildName] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [guestPatientName, setGuestPatientName] = useState('');
 
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedService, setSelectedService] = useState(null);
@@ -47,27 +52,26 @@ export const BookingPage = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState(null);
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getMinBookingDate());
 
   const [slotsData, setSlotsData] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotError, setSlotError] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   const [complaint, setComplaint] = useState('');
   const [phone, setPhone] = useState(user?.phone || '');
   const [submitting, setSubmitting] = useState(false);
+  const [errorTitle, setErrorTitle] = useState('Gagal Menyimpan Booking');
   const [errorMsg, setErrorMsg] = useState('');
   const [successBooking, setSuccessBooking] = useState(null);
 
-  // Quick Inline Add Child
-  const [showAddChildInline, setShowAddChildInline] = useState(false);
-  const [newChildName, setNewChildName] = useState('');
-  const [newChildBirthDate, setNewChildBirthDate] = useState('');
-  const [newChildGender, setNewChildGender] = useState('male');
-  const [savingNewChild, setSavingNewChild] = useState(false);
+  // Quick Inline Add Patient
+  const [showAddPatientInline, setShowAddPatientInline] = useState(false);
+  const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientBirthDate, setNewPatientBirthDate] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState('male');
+  const [savingNewPatient, setSavingNewPatient] = useState(false);
 
   // 1. Initial Data Fetching
   useEffect(() => {
@@ -120,35 +124,35 @@ export const BookingPage = () => {
     loadInitialData();
   }, [searchParams]);
 
-  // Load children if user is logged in
+  // Load patients if user is logged in
   useEffect(() => {
     if (isAuthenticated) {
-      const loadChildren = async () => {
+      const loadPatients = async () => {
         try {
-          const res = await parentService.getChildren();
+          const res = await parentService.getPatients();
           const list = res.data?.data || res.data || [];
           if (Array.isArray(list) && list.length > 0) {
-            setChildrenList(list);
+            setPatientsList(list);
 
-            const childIdParam = searchParams.get('child_id');
-            if (childIdParam) {
-              const foundChild = list.find((c) => c.id.toString() === childIdParam);
-              if (foundChild) {
-                setSelectedChildId(childIdParam);
-                setSelectedChild(foundChild);
+            const patientIdParam = searchParams.get('patient_id');
+            if (patientIdParam) {
+              const foundPatient = list.find((c) => c.id.toString() === patientIdParam);
+              if (foundPatient) {
+                setSelectedPatientId(patientIdParam);
+                setSelectedPatient(foundPatient);
               }
-            } else if (!selectedChildId && list.length === 1) {
-              // Auto select if only 1 child
-              setSelectedChildId(list[0].id.toString());
-              setSelectedChild(list[0]);
+            } else if (!selectedPatientId && list.length === 1) {
+              // Auto select if only 1 patient
+              setSelectedPatientId(list[0].id.toString());
+              setSelectedPatient(list[0]);
             }
           }
         } catch (err) {
-          console.error('Failed to load parent children:', err);
+          console.error('Failed to load parent patients:', err);
         }
       };
 
-      loadChildren();
+      loadPatients();
     }
   }, [isAuthenticated, searchParams]);
 
@@ -160,8 +164,9 @@ export const BookingPage = () => {
   }, [selectedDoctorId, selectedDate]);
 
   const loadSlots = async () => {
+    if (!selectedDoctorId || !selectedDate) return;
     setLoadingSlots(true);
-    setErrorMsg('');
+    setSlotError('');
     setSelectedSlot(null);
     try {
       const res = await doctorService.getAvailableSlots(selectedDoctorId, selectedDate);
@@ -170,7 +175,8 @@ export const BookingPage = () => {
       }
     } catch (err) {
       console.error('Gagal mengambil slot dokter:', err);
-      setErrorMsg('Gagal memuat slot jadwal. Silakan coba kembali.');
+      const errMsg = err.response?.data?.message || 'Gagal memuat slot jadwal. Silakan coba kembali.';
+      setSlotError(errMsg);
     } finally {
       setLoadingSlots(false);
     }
@@ -181,29 +187,30 @@ export const BookingPage = () => {
     setSelectedSlot(slot);
   };
 
-  // Quick save new child
-  const handleCreateChildInline = async (e) => {
+  // Quick save new patient
+  const handleCreatePatientInline = async (e) => {
     e.preventDefault();
-    if (!newChildName.trim() || !newChildBirthDate) return;
+    if (!newPatientName.trim() || !newPatientBirthDate) return;
 
-    setSavingNewChild(true);
+    setSavingNewPatient(true);
     try {
-      const res = await parentService.createChild({
-        name: newChildName,
-        birth_date: newChildBirthDate,
-        gender: newChildGender,
+      const res = await parentService.createPatient({
+        name: newPatientName,
+        birth_date: newPatientBirthDate,
+        gender: newPatientGender,
       });
       const created = res.data?.data || res.data;
-      setChildrenList((prev) => [...prev, created]);
-      setSelectedChildId(created.id.toString());
-      setSelectedChild(created);
-      setShowAddChildInline(false);
-      setNewChildName('');
-      setNewChildBirthDate('');
+      setPatientsList((prev) => [...prev, created]);
+      setSelectedPatientId(created.id.toString());
+      setSelectedPatient(created);
+      setShowAddPatientInline(false);
+      setNewPatientName('');
+      setNewPatientBirthDate('');
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menambahkan data anak.');
+      setErrorTitle('Gagal Menambahkan Pasien');
+      setErrorMsg(err.response?.data?.message || 'Gagal menambahkan data pasien.');
     } finally {
-      setSavingNewChild(false);
+      setSavingNewPatient(false);
     }
   };
 
@@ -214,30 +221,34 @@ export const BookingPage = () => {
     }
 
     if (!selectedSlot || !selectedDoctor || !complaint.trim() || !phone.trim()) {
+      setErrorTitle('Data Belum Lengkap');
       setErrorMsg('Mohon lengkapi seluruh informasi booking yang diperlukan.');
       return;
     }
 
-    // For authenticated users, child_id is required
-    if (isAuthenticated && !selectedChildId) {
-      setErrorMsg('Mohon pilih anak terlebih dahulu.');
+    // For authenticated users, patient is required
+    if (isAuthenticated && !selectedPatientId) {
+      setErrorTitle('Data Pasien Belum Dipilih');
+      setErrorMsg('Mohon pilih pasien terlebih dahulu.');
       return;
     }
 
     // Service is now required based on PRD
     if (!selectedServiceId) {
+      setErrorTitle('Layanan Terapi Belum Dipilih');
       setErrorMsg('Mohon pilih layanan terapi terlebih dahulu.');
       return;
     }
 
     setSubmitting(true);
     setErrorMsg('');
+    setErrorTitle('Gagal Menyimpan Booking');
 
     try {
       const payload = {
         doctor_id: parseInt(selectedDoctor.id),
         service_id: parseInt(selectedServiceId),
-        child_id: selectedChildId ? parseInt(selectedChildId) : null,
+        patient_id: selectedPatientId ? parseInt(selectedPatientId) : null,
         schedule_id: selectedSlot.schedule_id ? parseInt(selectedSlot.schedule_id) : null,
         appointment_date: selectedDate,
         appointment_time: selectedSlot.start_time,
@@ -248,6 +259,7 @@ export const BookingPage = () => {
       const res = await bookingService.create(payload);
       if (res.data?.data) {
         setSuccessBooking(res.data.data);
+        refreshNotifications();
       }
     } catch (err) {
       console.error('Booking error:', err);
@@ -286,14 +298,11 @@ export const BookingPage = () => {
   };
 
   const getMinDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return getMinBookingDate();
   };
 
   const getMaxDate = () => {
-    const max = new Date();
-    max.setDate(max.getDate() + 30);
-    return max.toISOString().split('T')[0];
+    return getMaxBookingDate(30);
   };
 
   return (
@@ -308,37 +317,39 @@ export const BookingPage = () => {
           Pemesanan Jadwal Sesi Terapi
         </h1>
         <p className="text-slate-500 text-sm max-w-xl mx-auto">
-          Pilih data anak, layanan terapi, terapis ahli, dan slot waktu yang nyaman untuk buah hati Anda.
+          Pilih data diri, layanan terapi, terapis ahli, dan slot waktu yang nyaman untuk diri Anda.
         </p>
       </div>
 
       {/* Stepper Progress */}
       {!successBooking && (
-        <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto scrollbar-none">
-          <div className="flex items-center justify-between min-w-[580px] text-xs font-bold gap-1">
+        <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="grid grid-cols-2 min-[500px]:grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 text-xs font-bold">
             {[
-              { num: 1, label: '1. Pasien Anak' },
-              { num: 2, label: '2. Layanan Terapi' },
-              { num: 3, label: '3. Dokter/Terapis' },
+              { num: 1, label: '1. Pasien' },
+              { num: 2, label: '2. Layanan' },
+              { num: 3, label: '3. Dokter' },
               { num: 4, label: '4. Tanggal & Slot' },
               { num: 5, label: '5. Keluhan & Kontak' },
               { num: 6, label: '6. Konfirmasi' },
             ].map((st) => (
-              <div
+              <button
                 key={st.num}
+                type="button"
                 onClick={() => {
                   if (st.num < step) setStep(st.num);
                 }}
-                className={`py-2 px-3 rounded-xl transition text-center whitespace-nowrap cursor-pointer ${
+                disabled={st.num > step}
+                className={`py-2 px-1.5 sm:px-2 rounded-xl transition text-center font-bold text-xs flex items-center justify-center leading-tight ${
                   step === st.num
-                    ? 'bg-brand-600 text-white shadow-sm'
+                    ? 'bg-brand-600 text-white shadow-sm ring-1 ring-brand-500'
                     : step > st.num
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-400'
+                    ? 'bg-brand-50 text-brand-700 hover:bg-brand-100 cursor-pointer'
+                    : 'text-slate-400 bg-slate-50/60 cursor-not-allowed'
                 }`}
               >
-                {st.label}
-              </div>
+                <span className="truncate">{st.label}</span>
+              </button>
             ))}
           </div>
         </div>
@@ -348,14 +359,22 @@ export const BookingPage = () => {
       {errorMsg && (
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3 animate-shake">
           <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-bold">Gagal Menyimpan Booking</p>
+          <div className="flex-1">
+            <p className="font-bold">{errorTitle || 'Terjadi Kendala'}</p>
             <div className="text-xs mt-0.5 text-rose-700 space-y-1">
               {errorMsg.split('\n').map((line, index) => (
                 <p key={index}>{line}</p>
               ))}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg('')}
+            className="text-rose-500 hover:text-rose-700 p-1 rounded-lg transition"
+            title="Tutup pesan"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -381,10 +400,12 @@ export const BookingPage = () => {
           </div>
 
           <div className="max-w-md mx-auto bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3 text-xs sm:text-sm">
-            {successBooking.child && (
+            {successBooking.patient && (
               <div className="flex justify-between">
-                <span className="text-slate-500">Pasien Anak:</span>
-                <span className="font-bold text-slate-800">{successBooking.child?.name}</span>
+                <span className="text-slate-500">Pasien:</span>
+                <span className="font-bold text-slate-800">
+                  {successBooking.patient?.name}
+                </span>
               </div>
             )}
             {successBooking.service && (
@@ -441,44 +462,44 @@ export const BookingPage = () => {
       ) : (
         <div className="space-y-6">
           {/* ================================================= */}
-          {/* STEP 1: SELECT CHILD                              */}
+          {/* STEP 1: SELECT PATIENT                            */}
           {/* ================================================= */}
           {step === 1 && (
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
-                    <Baby className="w-5 h-5" />
+                    <UserCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">Langkah 1: Pilih Pasien Buah Hati</h3>
+                    <h3 className="text-xl font-bold text-slate-900">Langkah 1: Pilih Pasien</h3>
                     <p className="text-xs text-slate-500">
-                      Tentukan anak yang akan mengikuti sesi konsultasi atau terapi.
+                      Tentukan Pasien yang akan mengikuti sesi konsultasi atau terapi.
                     </p>
                   </div>
                 </div>
 
-                {isAuthenticated && !showAddChildInline && (
+                {isAuthenticated && !showAddPatientInline && (
                   <button
-                    onClick={() => setShowAddChildInline(true)}
+                    onClick={() => setShowAddPatientInline(true)}
                     className="py-2 px-3 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs hover:bg-brand-100 transition flex items-center gap-1"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Tambah Anak Baru
+                    <Plus className="w-3.5 h-3.5" /> Tambah Pasien Baru
                   </button>
                 )}
               </div>
 
-              {/* Inline Add Child Form */}
-              {showAddChildInline && (
+              {/* Inline Add Patient Form */}
+              {showAddPatientInline && (
                 <form
-                  onSubmit={handleCreateChildInline}
+                  onSubmit={handleCreatePatientInline}
                   className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-bold text-slate-800 text-sm">Daftarkan Anak Baru Cepat</h4>
+                    <h4 className="font-bold text-slate-800 text-sm">Daftarkan Pasien Baru Cepat</h4>
                     <button
                       type="button"
-                      onClick={() => setShowAddChildInline(false)}
+                      onClick={() => setShowAddPatientInline(false)}
                       className="text-xs text-slate-400 hover:text-slate-600 font-bold"
                     >
                       Batal
@@ -493,9 +514,9 @@ export const BookingPage = () => {
                       <input
                         type="text"
                         required
-                        placeholder="Nama Anak"
-                        value={newChildName}
-                        onChange={(e) => setNewChildName(e.target.value)}
+                        placeholder="Nama pasien"
+                        value={newPatientName}
+                        onChange={(e) => setNewPatientName(e.target.value)}
                         className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
                       />
                     </div>
@@ -507,8 +528,8 @@ export const BookingPage = () => {
                       <input
                         type="date"
                         required
-                        value={newChildBirthDate}
-                        onChange={(e) => setNewChildBirthDate(e.target.value)}
+                        value={newPatientBirthDate}
+                        onChange={(e) => setNewPatientBirthDate(e.target.value)}
                         className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
                       />
                     </div>
@@ -518,8 +539,8 @@ export const BookingPage = () => {
                         Jenis Kelamin
                       </label>
                       <select
-                        value={newChildGender}
-                        onChange={(e) => setNewChildGender(e.target.value)}
+                        value={newPatientGender}
+                        onChange={(e) => setNewPatientGender(e.target.value)}
                         className="w-full py-2 px-3 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none"
                       >
                         <option value="male">Laki-laki</option>
@@ -531,40 +552,40 @@ export const BookingPage = () => {
                   <div className="flex justify-end pt-2">
                     <button
                       type="submit"
-                      disabled={savingNewChild}
+                      disabled={savingNewPatient}
                       className="py-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs"
                     >
-                      {savingNewChild ? 'Menyimpan...' : 'Simpan & Pilih Anak'}
+                      {savingNewPatient ? 'Menyimpan...' : 'Simpan & Pilih Pasien'}
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* Children List */}
+              {/* Patients List */}
               {isAuthenticated ? (
-                childrenList.length === 0 && !showAddChildInline ? (
+                patientsList.length === 0 && !showAddPatientInline ? (
                   <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    <Baby className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <UserCheck className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-xs sm:text-sm text-slate-600 font-semibold">
-                      Anda belum mendaftarkan profil anak.
+                      Anda belum mendaftarkan profil pasien.
                     </p>
                     <button
-                      onClick={() => setShowAddChildInline(true)}
+                      onClick={() => setShowAddPatientInline(true)}
                       className="mt-3 py-2 px-4 rounded-xl bg-brand-600 text-white text-xs font-bold"
                     >
-                      + Tambahkan Profil Anak
+                      + Tambahkan Profil Pasien
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {childrenList.map((ch) => {
-                      const isSelected = selectedChildId === ch.id.toString();
+                    {patientsList.map((patient) => {
+                      const isSelected = selectedPatientId === patient.id.toString();
                       return (
                         <div
-                          key={ch.id}
+                          key={patient.id}
                           onClick={() => {
-                            setSelectedChildId(ch.id.toString());
-                            setSelectedChild(ch);
+                            setSelectedPatientId(patient.id.toString());
+                            setSelectedPatient(patient);
                           }}
                           className={`p-4 rounded-2xl border cursor-pointer transition flex items-center justify-between ${
                             isSelected
@@ -574,16 +595,16 @@ export const BookingPage = () => {
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                              ch.gender === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
+                              patient.gender === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
                             }`}>
-                              {ch.name.charAt(0)}
+                              {patient.name.charAt(0)}
                             </div>
                             <div>
                               <h4 className="font-bold text-slate-900 text-sm leading-tight">
-                                {ch.name}
+                                {patient.name}
                               </h4>
-                              <span className="text-xs text-slate-500">
-                                {ch.gender === 'female' ? '👧 Perempuan' : '👦 Laki-laki'}
+                              <span className="text-xs text-slate-500 font-medium">
+                                {patient.gender === 'female' ? 'Perempuan' : 'Laki-laki'}
                               </span>
                             </div>
                           </div>
@@ -600,18 +621,18 @@ export const BookingPage = () => {
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Nama Pasien Anak / Pendaftar:
+                      Nama Pasien / Pendaftar:
                     </label>
                     <input
                       type="text"
-                      placeholder="Masukkan nama anak..."
-                      value={guestChildName}
-                      onChange={(e) => setGuestChildName(e.target.value)}
+                      placeholder="Masukkan nama pasien / pendaftar..."
+                      value={guestPatientName}
+                      onChange={(e) => setGuestPatientName(e.target.value)}
                       className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
                     />
                   </div>
                   <p className="text-[11px] text-amber-800">
-                    Atau masuk / daftar akun orang tua untuk mengaitkan rekam medis anak Anda secara permanen.
+                    Atau masuk / daftar akun orang tua untuk mengaitkan rekam medis pasien Anda secara permanen.
                   </p>
                 </div>
               )}
@@ -641,7 +662,7 @@ export const BookingPage = () => {
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">Langkah 2: Pilih Layanan Terapi</h3>
                     <p className="text-xs text-slate-500">
-                      Pilih jenis program atau terapi yang dibutuhkan buah hati.
+                      Pilih jenis program atau terapi yang dibutuhkan.
                     </p>
                   </div>
                 </div>
@@ -722,7 +743,7 @@ export const BookingPage = () => {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Langkah 3: Pilih Dokter / Terapis</h3>
                   <p className="text-xs text-slate-500">
-                    Pilih terapis terpercaya yang akan mendampingi sesi terapi buah hati.
+                    Pilih terapis terpercaya yang akan mendampingi sesi terapi.
                   </p>
                 </div>
               </div>
@@ -828,6 +849,17 @@ export const BookingPage = () => {
 
                 {loadingSlots ? (
                   <SlotGridSkeleton />
+                ) : slotError ? (
+                  <div className="p-6 text-center bg-rose-50 rounded-2xl border border-rose-200 text-rose-700 text-xs sm:text-sm space-y-2">
+                    <p className="font-semibold">{slotError}</p>
+                    <button
+                      type="button"
+                      onClick={loadSlots}
+                      className="py-1.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Muat Ulang Slot
+                    </button>
+                  </div>
                 ) : !slotsData || !slotsData.slots || slotsData.slots.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs sm:text-sm">
                     {slotsData?.message || 'Tidak ada slot waktu tersedia pada tanggal ini. Silakan pilih tanggal lain.'}
@@ -890,7 +922,7 @@ export const BookingPage = () => {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Langkah 5: Keluhan Pasien & Nomor WhatsApp</h3>
                   <p className="text-xs text-slate-500">
-                    Jelaskan kondisi atau tantangan tumbuh kembang yang dihadapi buah hati.
+                    Jelaskan kondisi atau tantangan yang dihadapi.
                   </p>
                 </div>
               </div>
@@ -921,7 +953,7 @@ export const BookingPage = () => {
                     rows={4}
                     required
                     minLength={10}
-                    placeholder="Jelaskan secara singkat kondisi anak, misal: Anak belum lancar bicara di usia 3 tahun, kesulitan fokus..."
+                    placeholder="Jelaskan secara singkat keluhan pasien, misal: Anda belum lancar bicara, kesulitan fokus, susah tidur, dan lain-lain..."
                     value={complaint}
                     onChange={(e) => setComplaint(e.target.value)}
                     className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -967,9 +999,9 @@ export const BookingPage = () => {
 
               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4 text-xs sm:text-sm">
                 <div className="flex justify-between pb-3 border-b border-slate-200">
-                  <span className="text-slate-500">Pasien Anak:</span>
+                  <span className="text-slate-500">Pasien:</span>
                   <span className="font-bold text-slate-900">
-                    {selectedChild?.name || guestChildName || 'Pasien Umum'}
+                    {selectedPatient?.name || guestPatientName || 'Pasien Umum'}
                   </span>
                 </div>
 

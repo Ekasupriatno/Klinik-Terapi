@@ -83,7 +83,7 @@ class DoctorController extends Controller
     public function availableSlots(Request $request, Doctor $doctor): JsonResponse
     {
         $request->validate([
-            'date' => ['required', 'date', 'after_or_equal:today'],
+            'date' => ['required', 'date'],
         ]);
 
         $slotsData = $this->slotEngine->getAvailableSlots($doctor->id, $request->date);

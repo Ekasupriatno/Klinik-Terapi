@@ -15,7 +15,7 @@ class SessionNoteController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = SessionNote::with('booking.child', 'therapist');
+        $query = SessionNote::with('booking.patient', 'therapist');
 
         if ($request->therapist_id) {
             $query->where('therapist_id', $request->therapist_id);
@@ -34,7 +34,7 @@ class SessionNoteController extends Controller
 
     public function show(SessionNote $sessionNote): SessionNoteResource
     {
-        $sessionNote->load('booking.child.guardian', 'therapist');
+        $sessionNote->load('booking.patient.guardian', 'therapist');
         return new SessionNoteResource($sessionNote);
     }
 

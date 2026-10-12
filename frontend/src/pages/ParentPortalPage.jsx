@@ -4,7 +4,6 @@ import { parentService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Users,
-  Baby,
   Receipt,
   User,
   Plus,
@@ -31,20 +30,21 @@ export const ParentPortalPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const activeTab = searchParams.get('tab') || 'children'; // 'children', 'invoices', 'profile'
+  const activeTab = searchParams.get('tab') || 'patients'; // 'patients', 'invoices', 'profile'
 
   // Tab switch helper
   const handleTabChange = (tabKey) => {
     setSearchParams({ tab: tabKey });
   };
 
-  // State: Children
-  const [childrenList, setChildrenList] = useState([]);
-  const [loadingChildren, setLoadingChildren] = useState(false);
-  const [childModalOpen, setChildModalOpen] = useState(false);
-  const [editingChild, setEditingChild] = useState(null);
-  const [savingChild, setSavingChild] = useState(false);
-  const [childForm, setChildForm] = useState({
+  // State: Patients
+  const [patientsList, setPatientsList] = useState([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const [patientModalOpen, setPatientModalOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [savingPatient, setSavingPatient] = useState(false);
+  const [patientFormError, setPatientFormError] = useState('');
+  const [patientForm, setPatientForm] = useState({
     name: '',
     birth_date: '',
     gender: 'male',
@@ -68,14 +68,14 @@ export const ParentPortalPage = () => {
     address: '',
     emergency_contact: '',
     emergency_phone: '',
-    relationship_to_child: 'parent',
+    relationship_to_patient: 'parent',
   });
   const [profileMessage, setProfileMessage] = useState({ type: '', text: '' });
 
   // Load data based on active tab
   useEffect(() => {
-    if (activeTab === 'children') {
-      fetchChildren();
+    if (activeTab === 'patients') {
+      fetchPatients();
     } else if (activeTab === 'invoices') {
       fetchInvoices();
     } else if (activeTab === 'profile') {
@@ -84,24 +84,25 @@ export const ParentPortalPage = () => {
   }, [activeTab, invoiceStatusFilter]);
 
   // ==========================
-  // CHILDREN LOGIC
+  // PATIENTS LOGIC
   // ==========================
-  const fetchChildren = async () => {
+  const fetchPatients = async () => {
     try {
-      setLoadingChildren(true);
-      const res = await parentService.getChildren();
+      setLoadingPatients(true);
+      const res = await parentService.getPatients();
       const list = res.data?.data || res.data || [];
-      setChildrenList(Array.isArray(list) ? list : []);
+      setPatientsList(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error('Failed to fetch children:', err);
+      console.error('Failed to fetch patients:', err);
     } finally {
-      setLoadingChildren(false);
+      setLoadingPatients(false);
     }
   };
 
-  const handleOpenAddChild = () => {
-    setEditingChild(null);
-    setChildForm({
+  const handleOpenAddPatient = () => {
+    setEditingPatient(null);
+    setPatientFormError('');
+    setPatientForm({
       name: '',
       birth_date: '',
       gender: 'male',
@@ -109,37 +110,39 @@ export const ParentPortalPage = () => {
       allergies: '',
       notes: '',
     });
-    setChildModalOpen(true);
+    setPatientModalOpen(true);
   };
 
-  const handleOpenEditChild = (child) => {
-    setEditingChild(child);
-    setChildForm({
-      name: child.name || '',
-      birth_date: child.birth_date ? child.birth_date.split('T')[0] : '',
-      gender: child.gender || 'male',
-      medical_history: child.medical_history || '',
-      allergies: child.allergies || '',
-      notes: child.notes || '',
+  const handleOpenEditPatient = (patient) => {
+    setEditingPatient(patient);
+    setPatientFormError('');
+    setPatientForm({
+      name: patient.name || '',
+      birth_date: patient.birth_date ? patient.birth_date.split('T')[0] : '',
+      gender: patient.gender || 'male',
+      medical_history: patient.medical_history || '',
+      allergies: patient.allergies || '',
+      notes: patient.notes || '',
     });
-    setChildModalOpen(true);
+    setPatientModalOpen(true);
   };
 
-  const handleSaveChild = async (e) => {
+  const handleSavePatient = async (e) => {
     e.preventDefault();
-    setSavingChild(true);
+    setSavingPatient(true);
+    setPatientFormError('');
     try {
-      if (editingChild) {
-        await parentService.updateChild(editingChild.id, childForm);
+      if (editingPatient) {
+        await parentService.updatePatient(editingPatient.id, patientForm);
       } else {
-        await parentService.createChild(childForm);
+        await parentService.createPatient(patientForm);
       }
-      setChildModalOpen(false);
-      fetchChildren();
+      setPatientModalOpen(false);
+      fetchPatients();
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan data anak.');
+      setPatientFormError(err.response?.data?.message || 'Gagal menyimpan data pasien.');
     } finally {
-      setSavingChild(false);
+      setSavingPatient(false);
     }
   };
 
@@ -199,7 +202,7 @@ export const ParentPortalPage = () => {
         address: profile.address || '',
         emergency_contact: profile.emergency_contact || '',
         emergency_phone: profile.emergency_phone || '',
-        relationship_to_child: profile.relationship_to_child || 'parent',
+        relationship_to_patient: profile.relationship_to_patient || 'parent',
       });
     } catch (err) {
       console.error('Failed to fetch guardian profile:', err);
@@ -243,7 +246,7 @@ export const ParentPortalPage = () => {
               Halo, {user?.name || 'Orang Tua Pasien'}
             </h1>
             <p className="text-sm text-teal-100 mt-1">
-              Kelola data buah hati, riwayat jadwal terapi, dan dokumen tagihan klinik Anda di satu tempat.
+              Kelola data pasien, riwayat jadwal terapi, dan dokumen tagihan klinik Anda di satu tempat.
             </p>
           </div>
 
@@ -259,27 +262,27 @@ export const ParentPortalPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-1.5 flex gap-1 mb-8 overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-1.5 grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2 mb-8">
           <button
-            onClick={() => handleTabChange('children')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
-              activeTab === 'children'
+            onClick={() => handleTabChange('patients')}
+            className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+              activeTab === 'patients'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
             }`}
           >
-            <Baby className="w-4 h-4" />
-            <span>Data Anak / Pasien</span>
-            {childrenList.length > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'children' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {childrenList.length}
+            <Users className="w-4 h-4" />
+            <span>Data Pasien</span>
+            {patientsList.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'patients' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                {patientsList.length}
               </span>
             )}
           </button>
 
           <button
             onClick={() => handleTabChange('invoices')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'invoices'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
@@ -291,7 +294,7 @@ export const ParentPortalPage = () => {
 
           <button
             onClick={() => handleTabChange('profile')}
-            className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+            className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
               activeTab === 'profile'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
@@ -303,30 +306,30 @@ export const ParentPortalPage = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* TAB 1: CHILDREN / PASIEN ANAK                             */}
+        {/* TAB 1: PATIENTS / DATA PASIEN                             */}
         {/* ========================================================= */}
-        {activeTab === 'children' && (
+        {activeTab === 'patients' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Daftar Anak Terdaftar
+                  Daftar Pasien Terdaftar
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tambahkan data profil anak untuk mempermudah pemesanan jadwal dan pemantauan sesi terapi.
+                  Tambahkan data profil pasien untuk mempermudah pemesanan jadwal dan pemantauan sesi terapi.
                 </p>
               </div>
 
               <button
-                onClick={handleOpenAddChild}
+                onClick={handleOpenAddPatient}
                 className="py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                Tambah Anak Baru
+                Tambah Pasien Baru
               </button>
             </div>
 
-            {loadingChildren ? (
+            {loadingPatients ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse">
@@ -336,51 +339,51 @@ export const ParentPortalPage = () => {
                   </div>
                 ))}
               </div>
-            ) : childrenList.length === 0 ? (
+            ) : patientsList.length === 0 ? (
               <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-sm">
                 <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Baby className="w-8 h-8" />
+                  <Users className="w-8 h-8" />
                 </div>
-                <h4 className="text-lg font-bold text-slate-900">Belum Ada Data Anak</h4>
+                <h4 className="text-lg font-bold text-slate-900">Belum Ada Data Pasien</h4>
                 <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-xs mx-auto">
-                  Daftarkan profil buah hati Anda untuk menghubungkan rekam medis dan catatan terapi klinis.
+                  Daftarkan profil pasien Anda untuk menghubungkan rekam medis dan catatan terapi klinis.
                 </p>
                 <button
-                  onClick={handleOpenAddChild}
+                  onClick={handleOpenAddPatient}
                   className="mt-6 py-2.5 px-5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition"
                 >
-                  + Daftarkan Anak Sekarang
+                  + Daftarkan Pasien Sekarang
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {childrenList.map((child) => (
+                {patientsList.map((patient) => (
                   <div
-                    key={child.id}
+                    key={patient.id}
                     className="bg-white rounded-2xl border border-slate-200 hover:border-brand-300 shadow-sm hover:shadow-md transition flex flex-col justify-between overflow-hidden"
                   >
                     <div className="p-6">
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base ${
-                            child.gender === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
+                            patient.gender === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {child.name.charAt(0).toUpperCase()}
+                            {patient.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <h4 className="font-bold text-slate-900 text-base leading-tight">
-                              {child.name}
+                              {patient.name}
                             </h4>
                             <span className="text-xs text-slate-500 font-medium">
-                              {child.gender === 'female' ? '👧 Perempuan' : '👦 Laki-laki'} • {calculateAge(child.birth_date)}
+                              {patient.gender === 'female' ? '👩 Perempuan' : '👨 Laki-laki'} • {calculateAge(patient.birth_date)}
                             </span>
                           </div>
                         </div>
 
                         <button
-                          onClick={() => handleOpenEditChild(child)}
+                          onClick={() => handleOpenEditPatient(patient)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-slate-100 transition"
-                          title="Edit Anak"
+                          title="Edit Pasien"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -390,8 +393,8 @@ export const ParentPortalPage = () => {
                         <div>
                           <span className="text-slate-400 block font-medium">Tanggal Lahir:</span>
                           <span className="font-semibold text-slate-800">
-                            {child.birth_date
-                              ? new Date(child.birth_date).toLocaleDateString('id-ID', {
+                            {patient.birth_date
+                              ? new Date(patient.birth_date).toLocaleDateString('id-ID', {
                                   day: 'numeric',
                                   month: 'long',
                                   year: 'numeric',
@@ -400,24 +403,24 @@ export const ParentPortalPage = () => {
                           </span>
                         </div>
 
-                        {child.allergies && (
+                        {patient.allergies && (
                           <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900">
                             <span className="font-bold block text-[11px] text-amber-800">⚠️ Alergi:</span>
-                            <span>{child.allergies}</span>
+                            <span>{patient.allergies}</span>
                           </div>
                         )}
 
-                        {child.medical_history && (
+                        {patient.medical_history && (
                           <div>
                             <span className="text-slate-400 block font-medium">Riwayat Tumbuh Kembang / Medis:</span>
-                            <span className="text-slate-700 line-clamp-2">{child.medical_history}</span>
+                            <span className="text-slate-700 line-clamp-2">{patient.medical_history}</span>
                           </div>
                         )}
 
-                        {child.notes && (
+                        {patient.notes && (
                           <div>
                             <span className="text-slate-400 block font-medium">Catatan Khusus:</span>
-                            <span className="text-slate-700 line-clamp-2 italic">{child.notes}</span>
+                            <span className="text-slate-700 line-clamp-2 italic">{patient.notes}</span>
                           </div>
                         )}
                       </div>
@@ -425,10 +428,10 @@ export const ParentPortalPage = () => {
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                       <span className="text-xs font-semibold text-slate-500">
-                        Status: <span className="text-emerald-700 font-bold capitalize">{child.status || 'Aktif'}</span>
+                        Status: <span className="text-emerald-700 font-bold capitalize">{patient.status || 'Aktif'}</span>
                       </span>
                       <button
-                        onClick={() => navigate(`/booking?child_id=${child.id}`)}
+                        onClick={() => navigate(`/booking?patient_id=${patient.id}`)}
                         className="py-1.5 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-sm"
                       >
                         <span>Pesan Terapi</span>
@@ -451,7 +454,7 @@ export const ParentPortalPage = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Tagihan & Riwayat Pembayaran</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Daftar tagihan sesi konsultasi dan terapi anak Anda di Klinik Terapi Alabina.
+                  Daftar tagihan sesi konsultasi dan terapi pasien Anda di Klinik Terapi Alabina.
                 </p>
               </div>
 
@@ -490,7 +493,7 @@ export const ParentPortalPage = () => {
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[11px] tracking-wider">
                       <tr>
                         <th className="py-3.5 px-4 sm:px-6">No. Invoice</th>
-                        <th className="py-3.5 px-4">Nama Anak</th>
+                        <th className="py-3.5 px-4">Nama Pasien</th>
                         <th className="py-3.5 px-4">Jatuh Tempo</th>
                         <th className="py-3.5 px-4">Total</th>
                         <th className="py-3.5 px-4">Status</th>
@@ -504,7 +507,7 @@ export const ParentPortalPage = () => {
                             {inv.invoice_number}
                           </td>
                           <td className="py-3.5 px-4 font-semibold text-slate-900">
-                            {inv.child?.name || inv.booking?.child?.name || 'Pasien Umum'}
+                            {inv.patient?.name || inv.booking?.patient?.name || 'Pasien Umum'}
                           </td>
                           <td className="py-3.5 px-4 text-slate-500 text-xs">
                             {inv.due_date
@@ -606,12 +609,12 @@ export const ParentPortalPage = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Hubungan dengan Anak
+                    Hubungan dengan Pasien
                   </label>
                   <select
-                    value={profileForm.relationship_to_child}
+                    value={profileForm.relationship_to_patient || 'parent'}
                     onChange={(e) =>
-                      setProfileForm({ ...profileForm, relationship_to_child: e.target.value })
+                      setProfileForm({ ...profileForm, relationship_to_patient: e.target.value })
                     }
                     className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   >
@@ -699,33 +702,39 @@ export const ParentPortalPage = () => {
       </div>
 
       {/* ========================================================= */}
-      {/* MODAL: ADD / EDIT CHILD                                    */}
+      {/* MODAL: ADD / EDIT PATIENT                                  */}
       {/* ========================================================= */}
-      {childModalOpen && (
+      {patientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
               <h3 className="text-xl font-bold text-slate-900">
-                {editingChild ? 'Edit Data Buah Hati' : 'Tambah Data Buah Hati'}
+                {editingPatient ? 'Edit Data Pasien' : 'Tambah Data Pasien'}
               </h3>
               <button
-                onClick={() => setChildModalOpen(false)}
+                onClick={() => setPatientModalOpen(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveChild} className="space-y-4">
+            <form onSubmit={handleSavePatient} className="space-y-4">
+              {patientFormError && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{patientFormError}</span>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Nama Lengkap Anak *
+                  Nama Lengkap Pasien *
                 </label>
                 <input
                   type="text"
                   required
-                  value={childForm.name}
-                  onChange={(e) => setChildForm({ ...childForm, name: e.target.value })}
+                  value={patientForm.name}
+                  onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
                   placeholder="Contoh: Muhammad Rafa"
                   className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
@@ -739,8 +748,8 @@ export const ParentPortalPage = () => {
                   <input
                     type="date"
                     required
-                    value={childForm.birth_date}
-                    onChange={(e) => setChildForm({ ...childForm, birth_date: e.target.value })}
+                    value={patientForm.birth_date}
+                    onChange={(e) => setPatientForm({ ...patientForm, birth_date: e.target.value })}
                     className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>
@@ -750,8 +759,8 @@ export const ParentPortalPage = () => {
                     Jenis Kelamin *
                   </label>
                   <select
-                    value={childForm.gender}
-                    onChange={(e) => setChildForm({ ...childForm, gender: e.target.value })}
+                    value={patientForm.gender}
+                    onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
                     className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   >
                     <option value="male">Laki-laki</option>
@@ -766,9 +775,9 @@ export const ParentPortalPage = () => {
                 </label>
                 <textarea
                   rows={2}
-                  value={childForm.medical_history}
-                  onChange={(e) => setChildForm({ ...childForm, medical_history: e.target.value })}
-                  placeholder="Misal: Lahir prematur 36 minggu, pernah speech delay..."
+                  value={patientForm.medical_history}
+                  onChange={(e) => setPatientForm({ ...patientForm, medical_history: e.target.value })}
+                  placeholder="Misal: pernah speech delay..."
                   className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
@@ -779,8 +788,8 @@ export const ParentPortalPage = () => {
                 </label>
                 <input
                   type="text"
-                  value={childForm.allergies}
-                  onChange={(e) => setChildForm({ ...childForm, allergies: e.target.value })}
+                  value={patientForm.allergies}
+                  onChange={(e) => setPatientForm({ ...patientForm, allergies: e.target.value })}
                   placeholder="Misal: Alergi kacang, gluten, debu halus"
                   className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
@@ -792,9 +801,9 @@ export const ParentPortalPage = () => {
                 </label>
                 <textarea
                   rows={2}
-                  value={childForm.notes}
-                  onChange={(e) => setChildForm({ ...childForm, notes: e.target.value })}
-                  placeholder="Kebiasaan anak, hal yang disukai saat bermain..."
+                  value={patientForm.notes}
+                  onChange={(e) => setPatientForm({ ...patientForm, notes: e.target.value })}
+                  placeholder="Kebiasaan pasien, hal yang disukai saat sesi terapi..."
                   className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
@@ -802,23 +811,23 @@ export const ParentPortalPage = () => {
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setChildModalOpen(false)}
+                  onClick={() => setPatientModalOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  disabled={savingChild}
+                  disabled={savingPatient}
                   className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2"
                 >
-                  {savingChild ? (
+                  {savingPatient ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
-                    'Simpan Data Anak'
+                    'Simpan Data Pasien'
                   )}
                 </button>
               </div>
@@ -853,7 +862,7 @@ export const ParentPortalPage = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-500">Pasien:</span>
                   <span className="font-bold text-slate-900">
-                    {selectedInvoice.child?.name || selectedInvoice.booking?.child?.name || 'Pasien Umum'}
+                    {selectedInvoice.patient?.name || selectedInvoice.booking?.patient?.name || 'Pasien Umum'}
                   </span>
                 </div>
                 <div className="flex justify-between">

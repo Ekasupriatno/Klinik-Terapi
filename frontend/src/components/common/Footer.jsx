@@ -39,17 +39,50 @@ export const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           
-          {/* Brand Col */}
+          {/* Brand logo */}
           <div className="space-y-4">
-            <Link to="/" className="inline-block bg-white px-3.5 py-2 rounded-2xl shadow-sm hover:opacity-95 transition">
-              <img src="/logo.png" alt="alabina" className="h-8 w-auto object-contain" />
+            <Link to="/" className="inline-flex items-center gap-3 group select-none">
+              <div className="h-11 w-11 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-md shadow-black/20 group-hover:scale-105 transition-transform duration-300 shrink-0">
+                <img
+                  src="/Alabina_Logo.webp"
+                  alt="Logo Rumah Terapi Alabina"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <span className="text-lg sm:text-xl font-extrabold text-white tracking-tight block leading-tight group-hover:text-brand-300 transition-colors">
+                  Rumah Terapi <span className="text-brand-400">Alabina</span>
+                </span>
+                <span className="text-[11px] font-semibold text-slate-400 block tracking-wide">
+                  Klinik Tumbuh Kembang
+                </span>
+              </div>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Pusat layanan terapi dan rehabilitasi fisik profesional terpercaya. Mengembalikan mobilitas dan kualitas hidup Anda melalui pendekatan medis modern.
+              Pusat layanan terapi dan rehabilitasi medik terpercaya. Mengoptimalkan setiap fase pemulihan dan kesehatan pasien melalui pendekatan klinis profesional.
             </p>
-            <div className="flex items-center gap-2 text-xs text-brand-400">
-              <Heart className="w-4 h-4 fill-brand-400 text-brand-400" />
-              <span>Prioritas utama kami adalah kesembuhan Anda.</span>
+            <div className="flex items-center gap-2 text-xs text-brand-400 font-medium">
+              <Heart className="w-4 h-4 fill-brand-400 text-brand-400 shrink-0" />
+              <span>Prioritas utama kami adalah kesehatan dan kemajuan pasien.</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-1">
+              <a
+                href="https://www.instagram.com/rumahterapi_alabina"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-400 transition flex items-center gap-1"
+              >
+                <span>IG: @rumahterapi_alabina</span>
+              </a>
+              <span className="text-slate-600">•</span>
+              <a
+                href="https://www.tiktok.com/@rumahterapi.alabina"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-400 transition flex items-center gap-1"
+              >
+                <span>TikTok: @rumahterapi.alabina</span>
+              </a>
             </div>
           </div>
 
@@ -76,11 +109,12 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-white font-bold text-base">Layanan Spesialisasi</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
-              <li>Fisioterapi & Cedera Olahraga</li>
-              <li>Terapi Saraf Kejepit & Tulang Belakang</li>
-              <li>Rehabilitasi Pasca Stroke</li>
+              <li>Terapi Okupasi & Sensori Integrasi</li>
               <li>Terapi Wicara & Bahasa</li>
-              <li>Akupunktur Medis & Nyeri Kronis</li>
+              <li>Orthopedagog (Pendidikan Khusus)</li>
+              <li>Konseling Individu & Pasangan</li>
+              <li>Psikotes & Asesmen Tumbuh Kembang</li>
+              <li>Brain Assessment & Gelombang Suara</li>
             </ul>
           </div>
 
@@ -88,10 +122,16 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-white font-bold text-base">Kontak & Operasional</h4>
             <div className="space-y-3 text-sm text-slate-400">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" />
-                <span className="whitespace-pre-line">{settings.address}</span>
-              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address || 'Klinik Terapi')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 hover:text-brand-300 transition group"
+                title="Buka lokasi di Google Maps"
+              >
+                <MapPin className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                <span className="whitespace-pre-line group-hover:underline underline-offset-2">{settings.address}</span>
+              </a>
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-brand-400 flex-shrink-0" />
                 <span>

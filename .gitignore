@@ -1,23 +1,103 @@
-# Environment
+# ==============================================================================
+# Environment & Secret Configurations (DO NOT COMMIT)
+# ==============================================================================
 .env
 .env.*
 !.env.example
-
-# Laravel environment
 backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+*.local
+*.pem
+*.key
+*.crt
 
-# Laravel
+# ==============================================================================
+# Backend: Laravel Application & Runtime
+# ==============================================================================
 backend/vendor/
+backend/node_modules/
+backend/public/storage
+backend/public/hot
+backend/public/build/
+
+# Laravel Storage & Uploads
+backend/storage/*.key
 backend/storage/logs/
 backend/storage/framework/
+backend/storage/app/public/
+backend/storage/app/temp/
 
-# Node
+# Laravel Bootstrap Cache
+backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitignore
+
+# Testing & Coverage Artifacts
+.phpunit.result.cache
+.pest.result.cache
+backend/.phpunit.result.cache
+backend/.pest.result.cache
+backend/tests/.pest.result.cache
+
+# Databases & SQLite Local Dumps
+*.sqlite
+*.sqlite-journal
+backend/database/*.sqlite
+*.sql
+*.sql.gz
+
+# ==============================================================================
+# Frontend: Node, Vite, & Build Outputs
+# ==============================================================================
+node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+.vite/
+.eslintcache
 
-# Environment
-backend/.env
-frontend/.env
-.env
-.env.*
-!.env.example
+# Package Manager Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==============================================================================
+# IDE, Editor, & System Files
+# ==============================================================================
+.vscode/*
+!.vscode/launch.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# ==============================================================================
+# Temporary Notes, Scratch Files & AI Assistant Artifacts
+# ==============================================================================
+IMPLEMENTATION_SUMMARY.md
+prd.txt
+text.md
+*.tmp
+*.bak
+.gemini/
+.agents/

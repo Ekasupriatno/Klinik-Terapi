@@ -4,11 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Article;
 use App\Models\Booking;
-use App\Models\Child;
 use App\Models\Doctor;
 use App\Models\Guardian;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Patient;
 use App\Models\Review;
 use App\Models\Schedule;
 use App\Models\Service;
@@ -74,7 +74,7 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Jl. Merdeka No. 123, Jakarta',
                 'emergency_contact' => 'Siti Santoso',
                 'emergency_phone' => '081234567891',
-                'relationship_to_child' => 'parent',
+                'relationship_to_patient' => 'parent',
             ]
         );
 
@@ -85,12 +85,12 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Jl. Mawar No. 45, Jakarta Selatan',
                 'emergency_contact' => 'Dewi Lestari',
                 'emergency_phone' => '081298765432',
-                'relationship_to_child' => 'parent',
+                'relationship_to_patient' => 'parent',
             ]
         );
 
-        // Create child/patient
-        $child = Child::firstOrCreate(
+        // Create patient record
+        $patient = Patient::firstOrCreate(
             [
                 'guardian_id' => $guardian->id,
                 'name' => 'Andi Santoso',
@@ -104,7 +104,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        Child::firstOrCreate(
+        Patient::firstOrCreate(
             [
                 'guardian_id' => $guardianPasien->id,
                 'name' => 'Dinda Putri',
@@ -150,6 +150,24 @@ class DatabaseSeeder extends Seeder
                 'icon' => 'ShieldCheck',
                 'description' => 'Koreksi postur, saraf kejepit (HNP), nyeri leher dan punggung akibat aktivitas duduk lama.',
             ],
+            [
+                'name' => 'Orthopedagog (Pendidikan Khusus)',
+                'slug' => 'orthopedagog',
+                'icon' => 'BookOpen',
+                'description' => 'Pendampingan khusus dan terapi pedagogis untuk membantu perkembangan belajar serta potensi anak.',
+            ],
+            [
+                'name' => 'Konseling & Psikologi',
+                'slug' => 'konseling-psikologi',
+                'icon' => 'Users',
+                'description' => 'Layanan konseling psikologi individual, pasien, dewasa, dan pasangan untuk kesehatan mental terpadu.',
+            ],
+            [
+                'name' => 'Psikotes & Asesmen Tumbuh Kembang',
+                'slug' => 'psikotes-asesmen',
+                'icon' => 'FileText',
+                'description' => 'Pemeriksaan psikotes lengkap, tes kecerdasan (IQ), minat bakat, dan evaluasi tumbuh kembang berkala.',
+            ],
         ];
 
         $specializations = [];
@@ -165,7 +183,6 @@ class DatabaseSeeder extends Seeder
             [
                 'specialization_id' => $specializations['fisioterapi']->id,
                 'name' => 'dr. Hendra Wijaya, Sp.KFR',
-                'sip_number' => 'SIP/446/2021/001',
                 'title' => 'Spesialis Kedokteran Fisik & Rehabilitasi',
                 'experience_years' => 9,
                 'consultation_fee' => 250000,
@@ -176,7 +193,6 @@ class DatabaseSeeder extends Seeder
             [
                 'specialization_id' => $specializations['chiropractic']->id,
                 'name' => 'dr. Anita Larasati, DC, M.Biomed',
-                'sip_number' => 'SIP/446/2022/089',
                 'title' => 'Doctor of Chiropractic & Spine Specialist',
                 'experience_years' => 7,
                 'consultation_fee' => 300000,
@@ -187,7 +203,6 @@ class DatabaseSeeder extends Seeder
             [
                 'specialization_id' => $specializations['terapi-wicara']->id,
                 'name' => 'Siti Nurhaliza, S.Tr.Kes (Terapi Wicara)',
-                'sip_number' => 'SIP/446/2020/045',
                 'title' => 'Terapis Wicara Senior',
                 'experience_years' => 6,
                 'consultation_fee' => 180000,
@@ -198,7 +213,6 @@ class DatabaseSeeder extends Seeder
             [
                 'specialization_id' => $specializations['akupunktur-medis']->id,
                 'name' => 'dr. Kevin Pratama, Sp.Ak',
-                'sip_number' => 'SIP/446/2019/112',
                 'title' => 'Spesialis Akupunktur Medik',
                 'experience_years' => 10,
                 'consultation_fee' => 220000,
@@ -209,7 +223,6 @@ class DatabaseSeeder extends Seeder
             [
                 'specialization_id' => $specializations['terapi-okupasi']->id,
                 'name' => 'Rina Amalia, S.Tr.Kes (Terapi Okupasi)',
-                'sip_number' => 'SIP/446/2021/156',
                 'title' => 'Terapis Okupasi Anak & Dewasa',
                 'experience_years' => 5,
                 'consultation_fee' => 200000,
@@ -221,7 +234,7 @@ class DatabaseSeeder extends Seeder
 
         $doctors = [];
         foreach ($doctorsData as $docItem) {
-            $doc = Doctor::firstOrCreate(['sip_number' => $docItem['sip_number']], $docItem);
+            $doc = Doctor::firstOrCreate(['name' => $docItem['name']], $docItem);
             $doctors[] = $doc;
 
             // 4. Jadwal Dokter (Senin - Sabtu)
@@ -246,38 +259,232 @@ class DatabaseSeeder extends Seeder
             $doctors[0]->update(['user_id' => $therapistUser->id]);
         }
 
-        // 5. Services
+        // 5. Services - Daftar Biaya Jasa Layanan Konseling & Terapi Rumah Terapi Al Abina
         $servicesData = [
+            // 1. Terapi Okupasi
             [
-                'specialization_id' => $specializations['fisioterapi']->id,
-                'name' => 'Sesi Fisioterapi Individual',
-                'description' => 'Terapi fisik satu-satu dengan fisioterapis untuk penanganan cedera dan rehabilitasi.',
+                'specialization_id' => $specializations['terapi-okupasi']->id,
+                'name' => 'Terapi Okupasi',
+                'description' => 'Terapi sensori integrasi dan kemandirian motorik fungsional: 45 menit intervensi terapi langsung + 15 menit laporan evaluasi perkembangan pasien.',
                 'duration_minutes' => 60,
-                'price' => 250000,
+                'price' => 150000,
                 'age_target' => 'Semua usia',
-                'benefits' => 'Pemulihan mobilitas, pengurangan nyeri, penguatan otot',
+                'benefits' => "45' terapi + 15' report. Membantu kemandirian fisik, koordinasi motorik, dan respon sensori.",
                 'show_price' => true,
                 'is_active' => true,
             ],
+            // 2. Terapi Wicara
             [
                 'specialization_id' => $specializations['terapi-wicara']->id,
-                'name' => 'Evaluasi Terapi Wicara',
-                'description' => 'Asesmen awal kemampuan bicara dan bahasa anak.',
-                'duration_minutes' => 45,
-                'price' => 180000,
-                'age_target' => '2-12 tahun',
-                'benefits' => 'Identifikasi keterlambatan bicara, rencana intervensi',
+                'name' => 'Terapi Wicara',
+                'description' => 'Terapi wicara dan stimulasi kemampuan bahasa: 45 menit sesi terapi langsung + 15 menit laporan evaluasi sesi.',
+                'duration_minutes' => 60,
+                'price' => 150000,
+                'age_target' => 'Semua usia',
+                'benefits' => "45' terapi + 15' report. Mengoptimalkan kemampuan artikulasi, pemahaman bahasa, dan komunikasi verbal.",
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 3. Orthopedagog
+            [
+                'specialization_id' => $specializations['orthopedagog']->id,
+                'name' => 'Orthopedagog',
+                'description' => 'Terapi pendidikan luar biasa dan pendampingan belajar khusus: 45 menit terapi + 15 menit laporan hasil sesi.',
+                'duration_minutes' => 60,
+                'price' => 150000,
+                'age_target' => 'Semua usia',
+                'benefits' => "45' terapi + 15' report. Pendampingan hambatan belajar, konsentrasi, dan bimbingan akademik adaptif.",
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 4. Brain Assessment
+            [
+                'specialization_id' => $specializations['fisioterapi']->id,
+                'name' => 'Brain Assessment',
+                'description' => 'Pemeriksaan screening neurofisiologi otak menyeluruh ditambah 1 sesi konsultasi mendalam dengan dokter spesialis.',
+                'duration_minutes' => 60,
+                'price' => 350000,
+                'age_target' => 'Semua usia',
+                'benefits' => 'Screening + 1 Konsultasi dengan dokter. Pemetaan gelombang otak dan fungsi neurologis.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 5. Paket Terapi Gelombang Suara 8xPertemuan
+            [
+                'specialization_id' => $specializations['fisioterapi']->id,
+                'name' => 'Paket Terapi Gelombang Suara (8x Pertemuan)',
+                'description' => 'Paket intensif terapi neuroakustik gelombang suara sebanyak 8 kali pertemuan + 1 sesi konsultasi dokter. (Promo diskon 20% menjadi IDR 2.400.000 dengan follow Instagram @rumahterapi_alabina dan TikTok @rumahterapi.alabina).',
+                'duration_minutes' => 60,
+                'price' => 3000000,
+                'age_target' => 'Semua usia',
+                'benefits' => '8x terapi + 1 Konsultasi dengan dokter. Promo disc 20% -> IDR 2.400.000 via follow medsos.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 6. Konseling Individu (Pasien & Dewasa)
+            [
+                'specialization_id' => $specializations['konseling-psikologi']->id,
+                'name' => 'Konseling Individu (Pasien & Dewasa)',
+                'description' => 'Sesi konseling psikologis personal dan kesehatan mental untuk pasien anak maupun dewasa. Durasi maksimal 75 menit (penambahan sesi: IDR 50.000 / 30 menit).',
+                'duration_minutes' => 75,
+                'price' => 250000,
+                'age_target' => 'Pasien & Dewasa',
+                'benefits' => "Persesi Max 75'. Penambahan sesi = 50.000/30'. Konseling mendalam dengan konselor profesional.",
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 7. Konseling Pasangan
+            [
+                'specialization_id' => $specializations['konseling-psikologi']->id,
+                'name' => 'Konseling Pasangan',
+                'description' => 'Sesi konseling pernikahan, komunikasi, dan resolusi konflik relasi untuk pasangan suami istri (tanpa laporan tertulis).',
+                'duration_minutes' => 75,
+                'price' => 400000,
+                'age_target' => 'Dewasa / Pasangan',
+                'benefits' => 'Tanpa Laporan. Membantu komunikasi harmonis dan penyelesaian konflik keluarga.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 8. Psikotes FULL (Konsul + Laporan)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Psikotes FULL (Konsul + Laporan)',
+                'description' => 'Pemeriksaan psikologis komprehensif mencakup instrumen psikotes lengkap, laporan resmi psikogram, dan sesi konsultasi hasil evaluasi.',
+                'duration_minutes' => 90,
+                'price' => 450000,
+                'age_target' => 'Semua usia',
+                'benefits' => 'Laporan Psikogram resmi + sesi konsultasi interpretasi hasil asesmen.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 9. Psikotes Minat Bakat (Dengan Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Psikotes Minat Bakat (Dengan Konsultasi)',
+                'description' => 'Asesmen pemetaan minat, bakat, dan potensi penjurusan studi/karir disertai laporan psikogram tertulis serta sesi konsultasi.',
+                'duration_minutes' => 60,
+                'price' => 450000,
+                'age_target' => 'Anak, Remaja & Dewasa',
+                'benefits' => '+ Laporan (Dengan Konsultasi). Arahan penjurusan studi dan pemetaan potensi karir.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 10. Psikotes Minat Bakat (Tanpa Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Psikotes Minat Bakat (Tanpa Konsultasi)',
+                'description' => 'Asesmen pemetaan minat dan bakat disertai laporan psikogram tertulis (tanpa sesi tatap muka konsultasi).',
+                'duration_minutes' => 60,
+                'price' => 275000,
+                'age_target' => 'Anak, Remaja & Dewasa',
+                'benefits' => '+ Laporan (Tanpa Konsultasi). Pemetaan potensi dan kecenderungan minat bakat tertulis.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 11. Tes Kecerdasan (Dengan Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Tes Kecerdasan (Dengan Konsultasi)',
+                'description' => 'Pengukuran inteligensi (skor IQ dan profil kognitif terstandar) dilengkapi laporan resmi dan konsultasi pembahasan hasil tes.',
+                'duration_minutes' => 60,
+                'price' => 425000,
+                'age_target' => 'Semua usia',
+                'benefits' => '+ Laporan (dengan konsultasi). Evaluasi skor IQ dan rekomendasi stimulasi kognitif.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 12. Tes Kecerdasan (Tanpa Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Tes Kecerdasan (Tanpa Konsultasi)',
+                'description' => 'Pengukuran inteligensi (skor IQ) disertai lembar laporan hasil psikogram terstandar (tanpa konsultasi).',
+                'duration_minutes' => 60,
+                'price' => 275000,
+                'age_target' => 'Semua usia',
+                'benefits' => '+ Laporan (tanpa konsultasi). Laporan resmi skor kecerdasan dan indikator kognitif.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 13. Assesment Intelegensi Pasien
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Assesment Intelegensi Pasien',
+                'description' => 'Pemeriksaan profil intelegensi klinis pasien secara individual, dilengkapi laporan tertulis dan konsultasi hasil tes terpadu.',
+                'duration_minutes' => 60,
+                'price' => 375000,
+                'age_target' => 'Pasien & Pelajar',
+                'benefits' => '+ Laporan (dengan konsultasi hasil tes). Analisis daya tangkap dan kapasitas berpikir kritis.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 14. Assesment Paket Kematangan Sekolah Dasar
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Assesment Paket Kematangan Sekolah Dasar',
+                'description' => 'Pemeriksaan kesiapan mental, motorik halus, dan kematangan sosial emosional anak memasuki jenjang SD + laporan & konsultasi.',
+                'duration_minutes' => 60,
+                'price' => 550000,
+                'age_target' => 'Usia 5-7 tahun',
+                'benefits' => '+ Laporan (dengan konsultasi). Rekomendasi kesiapan masuk SD dan panduan orang tua.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 15. Assesment Tumbuh Kembang (Tanpa Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Assesment Tumbuh Kembang (Tanpa Konsultasi)',
+                'description' => 'Pemeriksaan komprehensif tahapan milestone perkembangan anak dilengkapi laporan tertulis (tanpa konsultasi).',
+                'duration_minutes' => 60,
+                'price' => 350000,
+                'age_target' => 'Bayi, Balita & Anak',
+                'benefits' => '+ Laporan (tanpa konsultasi). Deteksi dini keterlambatan tumbuh kembang secara berkala.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 16. Assesment Tumbuh Kembang (Dengan Konsultasi)
+            [
+                'specialization_id' => $specializations['psikotes-asesmen']->id,
+                'name' => 'Assesment Tumbuh Kembang (Dengan Konsultasi)',
+                'description' => 'Pemeriksaan komprehensif tahapan tumbuh kembang pasien dilengkapi laporan tertulis resmi dan sesi konsultasi dengan tim ahli.',
+                'duration_minutes' => 60,
+                'price' => 600000,
+                'age_target' => 'Bayi, Balita & Anak',
+                'benefits' => '+ Laporan (dengan konsultasi). Rencana intervensi tumbuh kembang personal & terarah.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // 17. Administrasi
+            [
+                'specialization_id' => $specializations['terapi-okupasi']->id,
+                'name' => 'Administrasi',
+                'description' => 'Biaya registrasi berkas pasien dan administrasi klinik per pertemuan.',
+                'duration_minutes' => 15,
+                'price' => 25000,
+                'age_target' => 'Semua pasien',
+                'benefits' => 'Per Pertemuan. Pengelolaan rekam medis dan administrasi sesi.',
+                'show_price' => true,
+                'is_active' => true,
+            ],
+            // Layanan Umum Tambahan
+            [
+                'specialization_id' => $specializations['fisioterapi']->id,
+                'name' => 'Sesi Fisioterapi Individual',
+                'description' => 'Terapi fisik satu-satu dengan fisioterapis untuk penanganan cedera dan rehabilitasi fisik fungsional.',
+                'duration_minutes' => 60,
+                'price' => 250000,
+                'age_target' => 'Semua usia',
+                'benefits' => 'Pemulihan mobilitas, pengurangan nyeri, penguatan otot.',
                 'show_price' => true,
                 'is_active' => true,
             ],
             [
                 'specialization_id' => $specializations['akupunktur-medis']->id,
                 'name' => 'Sesi Akupunktur Medis',
-                'description' => 'Terapi jarum medis untuk pereda nyeri dan peredaran darah.',
+                'description' => 'Terapi jarum medis untuk pereda nyeri saraf, bells palsy, insomnia, dan kelancaran peredaran darah.',
                 'duration_minutes' => 45,
                 'price' => 220000,
                 'age_target' => 'Dewasa',
-                'benefits' => 'Pereda nyeri, relaksasi, perbaikan sirkulasi',
+                'benefits' => 'Pereda nyeri, relaksasi, perbaikan sirkulasi.',
                 'show_price' => true,
                 'is_active' => true,
             ],
@@ -296,7 +503,7 @@ class DatabaseSeeder extends Seeder
             ['booking_code' => 'KT-202609-DEMO1'],
             [
                 'user_id' => $parent->id,
-                'child_id' => $child->id,
+                'patient_id' => $patient->id,
                 'doctor_id' => $doctors[0]->id,
                 'service_id' => $services[0]->id,
                 'appointment_date' => Carbon::yesterday()->toDateString(),
@@ -324,7 +531,7 @@ class DatabaseSeeder extends Seeder
             ['invoice_number' => 'INV-DEMO001'],
             [
                 'booking_id' => $demoBooking->id,
-                'child_id' => $child->id,
+                'patient_id' => $patient->id,
                 'guardian_id' => $guardian->id,
                 'subtotal' => 250000,
                 'discount_amount' => 0,

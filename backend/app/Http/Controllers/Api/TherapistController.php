@@ -23,7 +23,7 @@ class TherapistController extends Controller
         // Today's appointments
         $todayAppointments = Booking::where('doctor_id', $doctorId)
             ->where('appointment_date', $today)
-            ->with('child', 'service')
+            ->with(['patient', 'service'])
             ->get();
 
         // Today's completed sessions
@@ -36,7 +36,7 @@ class TherapistController extends Controller
         $upcomingAppointments = Booking::where('doctor_id', $doctorId)
             ->where('appointment_date', '>=', $today)
             ->where('status', 'confirmed')
-            ->with('child', 'service')
+            ->with(['patient', 'service'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->limit(10)
@@ -45,12 +45,11 @@ class TherapistController extends Controller
         // Pending session notes
         $pendingNotes = SessionNote::where('therapist_id', $doctorId)
             ->where('status', 'draft')
-            ->with('booking.child')
             ->count();
 
         // Total patients assigned
         $totalPatients = Booking::where('doctor_id', $doctorId)
-            ->distinct('child_id')
+            ->distinct('patient_id')
             ->count();
 
         return response()->json([
@@ -70,11 +69,11 @@ class TherapistController extends Controller
         $doctorId = $this->doctorId($request);
 
         $query = Booking::where('doctor_id', $doctorId)
-            ->with('child.guardian.user', 'service')
-            ->distinct('child_id');
+            ->with(['patient.guardian.user', 'service'])
+            ->distinct('patient_id');
 
         if ($request->search) {
-            $query->whereHas('child', function ($q) use ($request) {
+            $query->whereHas('patient', function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%');
             });
         }
@@ -87,7 +86,7 @@ class TherapistController extends Controller
         $doctorId = $this->doctorId($request);
 
         $query = SessionNote::where('therapist_id', $doctorId)
-            ->with('booking.child', 'therapist');
+            ->with(['booking.patient', 'therapist']);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -104,7 +103,7 @@ class TherapistController extends Controller
 
         $appointments = Booking::where('doctor_id', $doctorId)
             ->whereBetween('appointment_date', [$startDate, $endDate])
-            ->with('child', 'service')
+            ->with(['patient', 'service'])
             ->orderBy('appointment_date')
             ->orderBy('appointment_time')
             ->get();

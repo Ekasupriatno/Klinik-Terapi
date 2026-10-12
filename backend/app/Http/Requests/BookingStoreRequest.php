@@ -25,8 +25,8 @@ class BookingStoreRequest extends FormRequest
     {
         return [
             'doctor_id' => ['required', 'exists:doctors,id'],
-            'service_id' => ['required', 'exists:services,id'],
-            'child_id' => ['nullable', 'exists:children,id'],
+            'service_id' => ['nullable', 'exists:services,id'],
+            'patient_id' => ['nullable', 'exists:patients,id'],
             'schedule_id' => ['nullable', 'exists:schedules,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],

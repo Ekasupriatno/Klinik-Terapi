@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Doctor;
 use App\Models\Specialization;
 use App\Models\User;
+use App\Notifications\AdminDoctorRegisteredNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -58,8 +59,6 @@ class DoctorRegistrationService
                     'specialization_id' => $matchedSpec?->id,
                     'specialization' => $validatedData['specialization'],
                     'name' => $validatedData['name'],
-                    'license_number' => $validatedData['license_number'],
-                    'sip_number' => $validatedData['license_number'], // keep in sync
                     'phone' => $validatedData['phone'],
                     'gender' => $validatedData['gender'],
                     'birth_date' => $validatedData['birth_date'],
@@ -85,12 +84,22 @@ class DoctorRegistrationService
                     AuditLog::create([
                         'user_id' => $user->id,
                         'action' => 'DOCTOR_REGISTRATION',
-                        'description' => "Dokter {$user->name} mendaftar (Status: Pending, No. Lisensi: {$doctor->license_number})",
+                        'description' => "Dokter {$user->name} mendaftar (Status: Pending)",
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
                     ]);
                 } catch (Throwable) {
                     // Fail silently for audit log
+                }
+
+                // 2e. Notify Admins
+                try {
+                    $admins = User::where('role', 'admin')->get();
+                    foreach ($admins as $admin) {
+                        $admin->notify(new AdminDoctorRegisteredNotification($doctor, $user));
+                    }
+                } catch (Throwable $notifEx) {
+                    Log::warning('Admin notification could not be sent: ' . $notifEx->getMessage());
                 }
 
                 return [

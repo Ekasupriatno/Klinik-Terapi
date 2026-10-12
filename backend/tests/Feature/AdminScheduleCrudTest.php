@@ -27,7 +27,6 @@ class AdminScheduleCrudTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/001',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,
@@ -93,7 +92,6 @@ class AdminScheduleCrudTest extends TestCase
         $doctor = Doctor::create([
             'specialization_id' => $specialization->id,
             'name' => 'dr. Test Doctor',
-            'sip_number' => 'SIP/446/2026/002',
             'experience_years' => 5,
             'consultation_fee' => 200000,
             'is_active' => true,

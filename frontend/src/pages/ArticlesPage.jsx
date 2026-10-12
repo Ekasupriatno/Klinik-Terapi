@@ -83,10 +83,10 @@ export const ArticlesPage = () => {
             Edukasi & Wawasan Terapi
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto leading-tight">
-            Artikel Tumbuh Kembang & Panduan Orang Tua
+            Artikel Edukasi & Panduan Pasien
           </h1>
           <p className="mt-4 text-base sm:text-lg text-teal-50 max-w-2xl mx-auto">
-            Pelajari berbagai wawasan praktis, tips stimulasi motorik dan bahasa, serta panduan kesehatan psikologi anak langsung dari para praktisi ahli.
+            Pelajari berbagai wawasan praktis, tips pemulihan motorik dan bahasa, serta panduan kesehatan dan terapi langsung dari para praktisi ahli.
           </p>
 
           {/* Search bar */}
@@ -107,7 +107,7 @@ export const ArticlesPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* Category Pills */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3 sm:p-4 mb-8 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3 sm:p-4 mb-8 flex flex-wrap items-center gap-2 sm:gap-2.5">
           {categories.map((cat) => (
             <button
               key={cat}

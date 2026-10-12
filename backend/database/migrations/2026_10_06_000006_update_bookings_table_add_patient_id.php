@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->foreignId('child_id')->nullable()->after('user_id')->constrained('children')->nullOnDelete();
+            $table->foreignId('patient_id')->nullable()->after('user_id')->constrained('patients')->nullOnDelete();
             $table->foreignId('service_id')->nullable()->after('doctor_id')->constrained('services')->nullOnDelete();
         });
     }
@@ -23,9 +23,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->dropForeign(['child_id']);
+            $table->dropForeign(['patient_id']);
             $table->dropForeign(['service_id']);
-            $table->dropColumn(['child_id', 'service_id']);
+            $table->dropColumn(['patient_id', 'service_id']);
         });
     }
 };

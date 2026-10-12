@@ -45,6 +45,7 @@ class SlotEngineService
         $slots = [];
         $now = Carbon::now();
         $isToday = $date->isToday();
+        $isPastDate = $date->isPast() && !$isToday;
 
         foreach ($schedules as $schedule) {
             $slotDuration = $schedule->slot_duration_minutes ?: 30;
@@ -56,7 +57,7 @@ class SlotEngineService
                 $slotEnd = $start->copy()->addMinutes($slotDuration)->format('H:i');
 
                 $isBooked = in_array($slotStart, $bookedSlots);
-                $isPast = $isToday && $start->lt($now);
+                $isPast = ($isToday && $start->lt($now)) || $isPastDate;
                 $isAvailable = !$isBooked && !$isPast;
 
                 $slots[] = [

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { adminService, bookingService, doctorService, scheduleService, clinicService } from '../services/api';
+import { formatLocalDate } from '../utils/dateUtils';
 import { BookingStatusBadge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { TableRowSkeleton } from '../components/common/Skeleton';
@@ -20,14 +22,21 @@ import {
   Edit2,
   FileText,
   Eye,
+  EyeOff,
   Phone,
   UserCheck,
   UserPlus,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  Mail,
+  Shield,
+  Lock,
+  Bell,
+  CheckCheck,
+  RefreshCw
 } from 'lucide-react';
 import { AdminGuardiansTab } from '../components/admin/AdminGuardiansTab';
-import { AdminChildrenTab } from '../components/admin/AdminChildrenTab';
+import { AdminPatientsTab } from '../components/admin/AdminPatientsTab';
 import { AdminServicesTab } from '../components/admin/AdminServicesTab';
 import { AdminSessionNotesTab } from '../components/admin/AdminSessionNotesTab';
 import { AdminInvoicesTab } from '../components/admin/AdminInvoicesTab';
@@ -38,7 +47,7 @@ import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
 import { processImage } from '../utils/imageUtils';
 
 export const AdminDashboardPage = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(currentTabFromUrl || 'bookings');
@@ -53,6 +62,29 @@ export const AdminDashboardPage = () => {
     setActiveTab(key);
     setSearchParams({ tab: key });
   };
+
+  const {
+    notifications: adminNotifications,
+    unreadCount: adminUnreadCount,
+    markAsRead: markAdminNotifAsRead,
+    markAllAsRead: markAllAdminNotifAsRead,
+    deleteNotification: deleteAdminNotif,
+    clearAllNotifications: clearAllAdminNotifs,
+    fetchNotifications: fetchAdminNotifications,
+    refreshNotifications,
+  } = useNotifications();
+  const [adminNotifOpen, setAdminNotifOpen] = useState(false);
+  const adminNotifRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (adminNotifRef.current && !adminNotifRef.current.contains(e.target)) {
+        setAdminNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -78,7 +110,7 @@ export const AdminDashboardPage = () => {
     phone: '',
     doctor_id: '',
     schedule_id: '',
-    appointment_date: new Date().toISOString().split('T')[0],
+    appointment_date: formatLocalDate(),
     appointment_time: '09:00',
     end_time: '09:30',
     status: 'confirmed',
@@ -113,7 +145,6 @@ export const AdminDashboardPage = () => {
     user_id: '',
     specialization_id: '',
     name: '',
-    sip_number: '',
     title: '',
     experience_years: 3,
     consultation_fee: 200000,
@@ -151,12 +182,27 @@ export const AdminDashboardPage = () => {
   const [doctorNotes, setDoctorNotes] = useState('');
 
   const [notification, setNotification] = useState({ type: '', message: '' });
+  
+  // Admin Security & Account State
+  const [emailForm, setEmailForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    current_password: '',
+  });
+  const [savingEmail, setSavingEmail] = useState(false);
+
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     password: '',
     password_confirmation: '',
   });
   const [savingPassword, setSavingPassword] = useState(false);
+  
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showEmailCurrentPassword, setShowEmailCurrentPassword] = useState(false);
+
   const [adminAccountForm, setAdminAccountForm] = useState({
     name: '',
     email: '',
@@ -165,6 +211,16 @@ export const AdminDashboardPage = () => {
     password_confirmation: '',
   });
   const [savingAdminAccount, setSavingAdminAccount] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setEmailForm((prev) => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchStats();
@@ -359,14 +415,73 @@ export const AdminDashboardPage = () => {
     setNotesModalOpen(false);
   };
 
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    if (!emailForm.email.trim()) {
+      setNotification({ type: 'error', message: 'Alamat email wajib diisi.' });
+      return;
+    }
+    if (!emailForm.current_password) {
+      setNotification({
+        type: 'error',
+        message: 'Masukkan kata sandi saat ini untuk memverifikasi identitas Anda demi keamanan.',
+      });
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const response = await adminService.updateEmail(emailForm);
+      setNotification({
+        type: 'success',
+        message: response.data?.message || 'Email dan profil admin berhasil diperbarui.',
+      });
+      if (response.data?.data) {
+        updateUser(response.data.data);
+      }
+      setEmailForm((prev) => ({ ...prev, current_password: '' }));
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: err.response?.data?.errors
+          ? Object.values(err.response.data.errors).flat().join(' ')
+          : err.response?.data?.message || 'Gagal memperbarui email admin.',
+      });
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    if (passwordForm.password.length < 8) {
+      setNotification({
+        type: 'error',
+        message: 'Kata sandi baru minimal 8 karakter dengan kombinasi huruf besar/kecil, angka, dan simbol.',
+      });
+      return;
+    }
+    if (passwordForm.password !== passwordForm.password_confirmation) {
+      setNotification({
+        type: 'error',
+        message: 'Konfirmasi kata sandi baru tidak cocok.',
+      });
+      return;
+    }
+    if (passwordForm.password === passwordForm.current_password) {
+      setNotification({
+        type: 'error',
+        message: 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini.',
+      });
+      return;
+    }
+
     setSavingPassword(true);
     try {
       const response = await adminService.changePassword(passwordForm);
       setNotification({
         type: 'success',
-        message: response.data?.message || 'Kata sandi berhasil diperbarui.',
+        message: response.data?.message || 'Kata sandi admin berhasil diperbarui. Sesi perangkat lain telah ditutup demi keamanan.',
       });
       setPasswordForm({ current_password: '', password: '', password_confirmation: '' });
     } catch (err) {
@@ -383,6 +498,21 @@ export const AdminDashboardPage = () => {
 
   const handleCreateAdminAccount = async (e) => {
     e.preventDefault();
+    if (adminAccountForm.password.length < 8) {
+      setNotification({
+        type: 'error',
+        message: 'Kata sandi admin minimal 8 karakter dengan kombinasi huruf besar/kecil, angka, dan simbol.',
+      });
+      return;
+    }
+    if (adminAccountForm.password !== adminAccountForm.password_confirmation) {
+      setNotification({
+        type: 'error',
+        message: 'Konfirmasi kata sandi tidak cocok.',
+      });
+      return;
+    }
+
     setSavingAdminAccount(true);
     try {
       const response = await adminService.createAdminAccount(adminAccountForm);
@@ -422,7 +552,7 @@ export const AdminDashboardPage = () => {
       phone: patients[0]?.phone || '',
       doctor_id: doctors[0]?.id || '',
       schedule_id: '',
-      appointment_date: new Date().toISOString().split('T')[0],
+      appointment_date: formatLocalDate(),
       appointment_time: '09:00',
       end_time: '09:30',
       status: 'confirmed',
@@ -443,7 +573,7 @@ export const AdminDashboardPage = () => {
       phone: booking.phone || booking.patient?.phone || '',
       doctor_id: booking.doctor?.id || booking.doctor_id || (doctors[0]?.id || ''),
       schedule_id: booking.schedule_id || '',
-      appointment_date: booking.appointment_date || new Date().toISOString().split('T')[0],
+      appointment_date: booking.appointment_date || formatLocalDate(),
       appointment_time: booking.appointment_time ? booking.appointment_time.slice(0, 5) : '09:00',
       end_time: booking.end_time ? booking.end_time.slice(0, 5) : '09:30',
       status: booking.status || 'confirmed',
@@ -621,7 +751,6 @@ export const AdminDashboardPage = () => {
       user_id: '',
       specialization_id: specializations[0]?.id || '',
       name: '',
-      sip_number: '',
       title: '',
       experience_years: 3,
       consultation_fee: 200000,
@@ -639,7 +768,6 @@ export const AdminDashboardPage = () => {
       user_id: doctor.therapist_account?.id?.toString() || '',
       specialization_id: doctor.specialization?.id || '',
       name: doctor.name || '',
-      sip_number: doctor.sip_number || '',
       title: doctor.title || '',
       experience_years: doctor.experience_years ?? 0,
       consultation_fee: doctor.consultation_fee ?? 0,
@@ -733,7 +861,7 @@ export const AdminDashboardPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
-      {/* Admin Title */}
+      {/* Admin Title & Notification Control */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
@@ -747,17 +875,171 @@ export const AdminDashboardPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Admin Notification Center Widget */}
+        <div className="relative flex items-center gap-3" ref={adminNotifRef}>
           <button
-            onClick={() => handleTabChange('settings')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm ${
-              activeTab === 'settings'
-                ? 'bg-brand-600 text-white shadow-brand-500/25 ring-2 ring-brand-400'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+            type="button"
+            onClick={() => {
+              setAdminNotifOpen((prev) => !prev);
+              if (!adminNotifOpen) fetchAdminNotifications();
+            }}
+            className={`relative flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border transition shadow-sm font-bold text-xs sm:text-sm cursor-pointer ${
+              adminUnreadCount > 0
+                ? 'bg-amber-500 text-white border-amber-400 hover:bg-amber-600 ring-4 ring-amber-400/20'
+                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
             }`}
+            aria-label={`Notifikasi Admin (${adminUnreadCount} belum dibaca)`}
           >
-            ⚙️ Edit Kontak Klinik (Telp, WA, Email, Alamat)
+            <Bell className={`w-4 h-4 ${adminUnreadCount > 0 ? 'animate-bounce text-white' : 'text-slate-500'}`} />
+            <span>Notifikasi</span>
+            {adminUnreadCount > 0 ? (
+              <span className="min-w-5 h-5 px-1.5 rounded-full bg-white text-amber-700 font-extrabold text-xs flex items-center justify-center shadow-xs">
+                {adminUnreadCount > 99 ? '99+' : adminUnreadCount}
+              </span>
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-slate-300" />
+            )}
           </button>
+
+          {/* Admin Notification Dropdown Panel */}
+          {adminNotifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden z-50 flex flex-col animate-in fade-in slide-in-from-top-2">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">
+                      Notifikasi Admin
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      {adminUnreadCount > 0 ? `${adminUnreadCount} belum dibaca` : 'Semua telah dibaca'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => fetchAdminNotifications(true)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-white/80 transition"
+                    title="Segarkan notifikasi"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                  {adminUnreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => markAllAdminNotifAsRead()}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-amber-200 text-amber-800 text-[11px] font-bold hover:bg-amber-100/50 transition flex items-center gap-1 shadow-2xs"
+                      title="Tandai semua dibaca"
+                    >
+                      <CheckCheck className="w-3 h-3" />
+                      <span>Tandai Dibaca</span>
+                    </button>
+                  )}
+                  {adminNotifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => clearAllAdminNotifs()}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-700 text-[11px] font-bold hover:bg-rose-50 transition flex items-center gap-1 shadow-2xs"
+                      title="Hapus semua notifikasi admin"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Hapus</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* List */}
+              <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
+                {adminNotifications.length > 0 ? (
+                  adminNotifications.map((notif) => {
+                    const isUnread = !notif.read_at;
+                    const type = notif.data?.type;
+
+                    return (
+                      <div
+                        key={notif.id}
+                        onClick={async () => {
+                          if (isUnread) await markAdminNotifAsRead(notif.id);
+                          if (type === 'doctor_registered') {
+                            handleTabChange('doctors');
+                          } else {
+                            handleTabChange('bookings');
+                          }
+                          setAdminNotifOpen(false);
+                        }}
+                        className={`group p-4 transition cursor-pointer hover:bg-slate-50 flex items-start justify-between gap-3 ${
+                          isUnread ? 'bg-amber-50/50' : 'bg-white'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold ${
+                            type === 'doctor_registered'
+                              ? 'bg-purple-100 text-purple-700'
+                              : type === 'booking_cancelled'
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-brand-100 text-brand-700'
+                          }`}>
+                            {type === 'doctor_registered' ? '👨‍⚕️' : type === 'booking_cancelled' ? '⚠️' : '📋'}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-xs font-bold text-slate-900 truncate">
+                                {notif.data?.title || 'Notifikasi Sistem'}
+                              </h4>
+                              {isUnread && (
+                                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                              )}
+                            </div>
+
+                            <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                              {notif.data?.message}
+                            </p>
+
+                            {notif.data?.appointment_date && (
+                              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                                <span>📅 {notif.data.appointment_date}</span>
+                                {notif.data.appointment_time && (
+                                  <span>⏰ {notif.data.appointment_time}</span>
+                                )}
+                              </div>
+                            )}
+
+                            <span className="text-[10px] text-slate-400 block mt-1">
+                              {notif.created_at ? new Date(notif.created_at).toLocaleString('id-ID') : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteAdminNotif(notif.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition shrink-0"
+                          title="Hapus notifikasi ini"
+                          aria-label="Hapus notifikasi"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-8 text-center text-slate-400 space-y-1">
+                    <p className="text-xs font-semibold">Belum ada notifikasi.</p>
+                    <p className="text-[11px] text-slate-400">Semua aktivitas baru klinik akan muncul di sini secara real-time.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -826,13 +1108,13 @@ export const AdminDashboardPage = () => {
       </div>
 
       {/* Tab Controls */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-3">
         {[
           { key: 'bookings', label: '📋 Reservasi' },
           { key: 'doctors', label: '👨‍⚕️ Dokter' },
           { key: 'schedules', label: '🕐 Jadwal' },
           { key: 'guardians', label: '👨‍👩‍👧‍👦 Wali Pasien' },
-          { key: 'children', label: '👶 Data Anak' },
+          { key: 'patients', label: '🗃️ Data Pasien' },
           { key: 'services', label: '🩺 Layanan' },
           { key: 'session_notes', label: '📝 Catatan Sesi' },
           { key: 'invoices', label: '🧾 Invoices' },
@@ -844,17 +1126,17 @@ export const AdminDashboardPage = () => {
             ? [{ key: 'account_security', label: '🔐 Akun & Keamanan' }]
             : []),
         ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => handleTabChange(tab.key)}
+            <button
+              key={tab.key}
+              onClick={() => handleTabChange(tab.key)}
             className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-              activeTab === tab.key
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
+                activeTab === tab.key
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
             {tab.label}
-          </button>
+            </button>
         ))}
       </div>
 
@@ -1066,7 +1348,7 @@ export const AdminDashboardPage = () => {
                     </span>
                   </h3>
                   <p className="text-xs text-amber-800/80">
-                    Dokter yang mendaftar melalui portal publik memerlukan verifikasi SIP/STR sebelum dapat aktif
+                    Dokter yang mendaftar melalui portal publik memerlukan verifikasi berkas lisensi resmi sebelum dapat aktif
                   </p>
                 </div>
               </div>
@@ -1114,10 +1396,6 @@ export const AdminDashboardPage = () => {
                       </div>
 
                       <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">No. Lisensi / SIP:</span>
-                          <span className="font-mono font-bold text-slate-800">{doc.license_number || doc.sip_number}</span>
-                        </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Pendidikan:</span>
                           <span className="font-medium text-slate-700 truncate max-w-[200px]">{doc.education || '-'}</span>
@@ -1199,7 +1477,7 @@ export const AdminDashboardPage = () => {
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
-                  <span>SIP: {doc.sip_number || doc.license_number}</span>
+                  <span className="font-medium text-slate-600">{doc.experience_years} Tahun Pengalaman</span>
                   <div className="flex items-center gap-1">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       doc.status === 'suspended'
@@ -1338,9 +1616,9 @@ export const AdminDashboardPage = () => {
       {activeTab === 'guardians' && <AdminGuardiansTab />}
 
       {/* ================================================= */}
-      {/* TAB 5: CHILDREN (PASIEN ANAK)                     */}
+      {/* TAB 5: PATIENTS (PASIEN)                          */}
       {/* ================================================= */}
-      {activeTab === 'children' && <AdminChildrenTab />}
+      {activeTab === 'patients' && <AdminPatientsTab />}
 
       {/* ================================================= */}
       {/* TAB 6: SERVICES (LAYANAN TERAPI)                  */}
@@ -1379,142 +1657,328 @@ export const AdminDashboardPage = () => {
       {activeTab === 'settings' && <AdminSettingsTab />}
 
       {activeTab === 'account_security' && ['super_admin', 'admin'].includes(user?.role) && (
-        <div className="grid gap-6 xl:grid-cols-2">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
-                <KeyRound className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">Ubah Kata Sandi Admin</h2>
-                <p className="text-xs text-slate-500">Pastikan akun admin tetap aman.</p>
+        <div className="space-y-6">
+          {/* BANNER KEAMANAN & PENGETATAN AUTENTIKASI */}
+          <div className="rounded-3xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-emerald-50/40 to-white p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      Keamanan Akun & Proteksi Autentikasi Diperketat
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                      <CheckCircle2 className="h-3 w-3" /> Aktif
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Sistem dilengkapi rate-limiting anti brute-force, enkripsi password ketat, auto-revocation token, dan audit trail forensik.
+                  </p>
+                </div>
               </div>
             </div>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Kata sandi saat ini</span>
-                <input
-                  required
-                  type="password"
-                  autoComplete="current-password"
-                  value={passwordForm.current_password}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Kata sandi baru</span>
-                <input
-                  required
-                  minLength={6}
-                  type="password"
-                  autoComplete="new-password"
-                  value={passwordForm.password}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Konfirmasi kata sandi baru</span>
-                <input
-                  required
-                  minLength={6}
-                  type="password"
-                  autoComplete="new-password"
-                  value={passwordForm.password_confirmation}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, password_confirmation: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <p className="text-[11px] text-slate-500">Minimal 6 karakter, mengandung huruf besar/kecil, angka, dan simbol.</p>
-              <button
-                type="submit"
-                disabled={savingPassword}
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
-              >
-                <KeyRound className="h-4 w-4" />
-                {savingPassword ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
-              </button>
-            </form>
-          </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                <ShieldCheck className="h-5 w-5" />
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-teal-100 bg-white/80 p-3.5 shadow-2xs">
+                <div className="flex items-center gap-2 text-teal-800 font-bold text-xs">
+                  <Lock className="h-4 w-4" />
+                  <span>Anti Brute-Force</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Maksimal 5 percobaan/menit untuk login, update email, dan ubah password.
+                </p>
               </div>
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900">Buat Akun Admin</h2>
-                <p className="text-xs text-slate-500">Hanya admin yang sudah masuk dapat membuat admin lain.</p>
+
+              <div className="rounded-2xl border border-teal-100 bg-white/80 p-3.5 shadow-2xs">
+                <div className="flex items-center gap-2 text-teal-800 font-bold text-xs">
+                  <KeyRound className="h-4 w-4" />
+                  <span>Kompleksitas Sandi</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Wajib 8+ karakter dengan huruf besar, kecil, angka, dan simbol khusus.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-teal-100 bg-white/80 p-3.5 shadow-2xs">
+                <div className="flex items-center gap-2 text-teal-800 font-bold text-xs">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Pencabutan Sesi</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Seluruh token di perangkat lain otomatis dicabut seketika saat password diubah.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-teal-100 bg-white/80 p-3.5 shadow-2xs">
+                <div className="flex items-center gap-2 text-teal-800 font-bold text-xs">
+                  <FileText className="h-4 w-4" />
+                  <span>Audit Trail</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Pergantian email, password, & percobaan login terekam lengkap di menu Audit Logs.
+                </p>
               </div>
             </div>
-            <form onSubmit={handleCreateAdminAccount} className="space-y-4">
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Nama</span>
-                <input
-                  required
-                  value={adminAccountForm.name}
-                  onChange={(e) => setAdminAccountForm({ ...adminAccountForm, name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Email</span>
-                <input
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={adminAccountForm.email}
-                  onChange={(e) => setAdminAccountForm({ ...adminAccountForm, email: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-slate-700">Nomor telepon (opsional)</span>
-                <input
-                  type="tel"
-                  value={adminAccountForm.phone}
-                  onChange={(e) => setAdminAccountForm({ ...adminAccountForm, phone: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block space-y-1">
-                  <span className="text-xs font-bold text-slate-700">Kata sandi</span>
-                  <input
-                    required
-                    minLength={6}
-                    type="password"
-                    autoComplete="new-password"
-                    value={adminAccountForm.password}
-                    onChange={(e) => setAdminAccountForm({ ...adminAccountForm, password: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-bold text-slate-700">Konfirmasi</span>
-                  <input
-                    required
-                    minLength={6}
-                    type="password"
-                    autoComplete="new-password"
-                    value={adminAccountForm.password_confirmation}
-                    onChange={(e) => setAdminAccountForm({ ...adminAccountForm, password_confirmation: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </label>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            {/* CARD 1: UBAH EMAIL & PROFIL ADMIN */}
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-slate-900">Ubah Email Admin</h2>
+                    <p className="text-xs text-slate-500">Perbarui email login dan nama profil admin.</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateEmail} className="space-y-4">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Nama Admin</span>
+                    <input
+                      type="text"
+                      required
+                      value={emailForm.name}
+                      onChange={(e) => setEmailForm({ ...emailForm, name: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      placeholder="Nama admin"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Alamat Email Baru</span>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={emailForm.email}
+                      onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      placeholder="admin@klinikterapi.com"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Kata sandi saat ini (Verifikasi)</span>
+                    <div className="relative">
+                      <input
+                        type={showEmailCurrentPassword ? 'text' : 'password'}
+                        required
+                        autoComplete="current-password"
+                        value={emailForm.current_password}
+                        onChange={(e) => setEmailForm({ ...emailForm, current_password: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        placeholder="Masukkan kata sandi saat ini"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailCurrentPassword(!showEmailCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showEmailCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <p className="text-[11px] text-slate-500">
+                    Kata sandi saat ini diperlukan untuk memverifikasi bahwa perubahan email dilakukan secara sah.
+                  </p>
+
+                  <button
+                    type="submit"
+                    disabled={savingEmail}
+                    className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sky-800 disabled:opacity-60"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {savingEmail ? 'Menyimpan...' : 'Perbarui Email Admin'}
+                  </button>
+                </form>
               </div>
-              <p className="text-[11px] text-slate-500">Password minimal 6 karakter dengan huruf besar/kecil, angka, dan simbol.</p>
-              <button
-                type="submit"
-                disabled={savingAdminAccount}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60"
-              >
-                <UserPlus className="h-4 w-4" />
-                {savingAdminAccount ? 'Membuat Akun...' : 'Buat Akun Admin'}
-              </button>
-            </form>
-          </section>
+            </section>
+
+            {/* CARD 2: UBAH KATA SANDI ADMIN */}
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+                    <KeyRound className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-slate-900">Ubah Kata Sandi Admin</h2>
+                    <p className="text-xs text-slate-500">Pastikan akun admin tetap aman.</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Kata sandi saat ini</span>
+                    <div className="relative">
+                      <input
+                        required
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={passwordForm.current_password}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Kata sandi baru</span>
+                    <div className="relative">
+                      <input
+                        required
+                        minLength={8}
+                        type={showNewPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={passwordForm.password}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Konfirmasi kata sandi baru</span>
+                    <div className="relative">
+                      <input
+                        required
+                        minLength={8}
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={passwordForm.password_confirmation}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, password_confirmation: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <p className="text-[11px] text-slate-500">
+                    Minimal 8 karakter, mengandung huruf besar/kecil, angka, dan simbol.
+                  </p>
+
+                  <button
+                    type="submit"
+                    disabled={savingPassword}
+                    className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-60"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    {savingPassword ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
+                  </button>
+                </form>
+              </div>
+            </section>
+
+            {/* CARD 3: BUAT AKUN ADMIN */}
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-slate-900">Buat Akun Admin</h2>
+                    <p className="text-xs text-slate-500">Hanya admin yang sudah masuk dapat membuat admin lain.</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleCreateAdminAccount} className="space-y-4">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Nama</span>
+                    <input
+                      required
+                      value={adminAccountForm.name}
+                      onChange={(e) => setAdminAccountForm({ ...adminAccountForm, name: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Email</span>
+                    <input
+                      required
+                      type="email"
+                      autoComplete="email"
+                      value={adminAccountForm.email}
+                      onChange={(e) => setAdminAccountForm({ ...adminAccountForm, email: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-slate-700">Nomor telepon (opsional)</span>
+                    <input
+                      type="tel"
+                      value={adminAccountForm.phone}
+                      onChange={(e) => setAdminAccountForm({ ...adminAccountForm, phone: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block space-y-1">
+                      <span className="text-xs font-bold text-slate-700">Kata sandi</span>
+                      <input
+                        required
+                        minLength={8}
+                        type="password"
+                        autoComplete="new-password"
+                        value={adminAccountForm.password}
+                        onChange={(e) => setAdminAccountForm({ ...adminAccountForm, password: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs font-bold text-slate-700">Konfirmasi</span>
+                      <input
+                        required
+                        minLength={8}
+                        type="password"
+                        autoComplete="new-password"
+                        value={adminAccountForm.password_confirmation}
+                        onChange={(e) => setAdminAccountForm({ ...adminAccountForm, password_confirmation: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-slate-500">Minimal 8 karakter dengan huruf besar/kecil, angka, dan simbol.</p>
+                  <button
+                    type="submit"
+                    disabled={savingAdminAccount}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    {savingAdminAccount ? 'Membuat Akun...' : 'Buat Akun Admin'}
+                  </button>
+                </form>
+              </div>
+            </section>
+          </div>
         </div>
       )}
 
@@ -1621,19 +2085,7 @@ export const AdminDashboardPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Nomor SIP Resmi</label>
-              <input
-                required
-                type="text"
-                value={doctorForm.sip_number}
-                onChange={(e) => setDoctorForm({ ...doctorForm, sip_number: e.target.value })}
-                placeholder="SIP/446/2023/..."
-                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:bg-white"
-              />
-            </div>
-
+          <div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700">Gelar / Jabatan</label>
               <input
@@ -2304,7 +2756,7 @@ export const AdminDashboardPage = () => {
           <div className="space-y-4 text-xs">
             <p className="text-slate-600">
               Anda akan {doctorActionModal.type === 'reject' ? 'menolak pendaftaran' : 'menangguhkan akun'} untuk dokter{' '}
-              <strong>{doctorActionModal.doctor.name}</strong> (SIP: {doctorActionModal.doctor.license_number || doctorActionModal.doctor.sip_number}).
+              <strong>{doctorActionModal.doctor.name}</strong>.
             </p>
 
             <div className="space-y-1">

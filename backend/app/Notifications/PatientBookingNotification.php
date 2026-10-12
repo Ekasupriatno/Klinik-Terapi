@@ -19,8 +19,8 @@ class PatientBookingNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
-        $booking = $this->booking->loadMissing(['user', 'child', 'doctor', 'service']);
-        $patientName = $booking->child?->name ?? $booking->user?->name ?? 'Pasien';
+        $booking = $this->booking->loadMissing(['user', 'patient', 'doctor', 'service']);
+        $patientName = $booking->patient?->name ?? $booking->user?->name ?? 'Pasien';
 
         return [
             'type' => 'patient_booking_created',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity, Mail, Lock, AlertCircle, ArrowRight, ShieldCheck, User, Hospital, Sparkles, Stethoscope, Eye, EyeOff } from 'lucide-react';
@@ -10,11 +10,27 @@ export const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/';
+
+  // Pastikan validitas HTML5 selalu bersih ketika state berubah (misal saat klik demo atau reset)
+  useEffect(() => {
+    if (emailRef.current) {
+      emailRef.current.setCustomValidity('');
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (passwordRef.current) {
+      passwordRef.current.setCustomValidity('');
+    }
+  }, [password]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,6 +58,8 @@ export const LoginPage = () => {
   };
 
   const fillDemo = (demoEmail, demoPass) => {
+    if (emailRef.current) emailRef.current.setCustomValidity('');
+    if (passwordRef.current) passwordRef.current.setCustomValidity('');
     setEmail(demoEmail);
     setPassword(demoPass);
     setErrorMsg('');
@@ -168,10 +186,24 @@ export const LoginPage = () => {
                   <div className="relative">
                     <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
+                      ref={emailRef}
                       required
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        e.target.setCustomValidity('');
+                      }}
+                      onInvalid={(e) => {
+                        if (e.target.validity.valueMissing) {
+                          e.target.setCustomValidity('Harap isi alamat email Anda.');
+                        } else if (e.target.validity.typeMismatch) {
+                          e.target.setCustomValidity('Format email tidak valid (contoh: nama@email.com).');
+                        } else {
+                          e.target.setCustomValidity('');
+                        }
+                      }}
+                      onInput={(e) => e.target.setCustomValidity('')}
                       placeholder="nama@email.com"
                       className="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition"
                     />
@@ -185,10 +217,22 @@ export const LoginPage = () => {
                   <div className="relative">
                     <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
+                      ref={passwordRef}
                       required
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        e.target.setCustomValidity('');
+                      }}
+                      onInvalid={(e) => {
+                        if (e.target.validity.valueMissing) {
+                          e.target.setCustomValidity('Harap isi kata sandi Anda.');
+                        } else {
+                          e.target.setCustomValidity('');
+                        }
+                      }}
+                      onInput={(e) => e.target.setCustomValidity('')}
                       placeholder="••••••••"
                       className="w-full pl-12 pr-12 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition"
                     />

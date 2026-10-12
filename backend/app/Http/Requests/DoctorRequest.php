@@ -29,7 +29,6 @@ class DoctorRequest extends FormRequest
             ],
             'specialization_id' => ['required', 'exists:specializations,id'],
             'name' => ['required', 'string', 'max:255'],
-            'sip_number' => ['required', 'string', Rule::unique('doctors', 'sip_number')->ignore($doctorId)],
             'title' => ['nullable', 'string', 'max:100'],
             'experience_years' => ['required', 'integer', 'min:0', 'max:60'],
             'consultation_fee' => ['required', 'numeric', 'min:0'],

@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\RegisterDoctorRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\AuditLog;
 use App\Models\Doctor;
 use App\Models\Guardian;
 use App\Models\User;
@@ -42,7 +43,6 @@ class AuthController extends Controller
                 'email' => $result['user']->email,
                 'role' => $result['user']->role,
                 'status' => $result['doctor']->status,
-                'license_number' => $result['doctor']->license_number,
                 'specialization' => $result['doctor']->specialization,
             ],
         ], 201);
@@ -53,8 +53,8 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        // Enforce role security: public register can only register parent / patient
-        $role = 'parent';
+        // Enforce role security: doctor registration creates therapist account, default is parent
+        $role = $request->role === 'doctor' ? 'therapist' : 'parent';
 
         $user = User::create([
             'name' => $request->name,
@@ -65,11 +65,13 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
-        // Create guardian profile for parent
-        $user->guardian()->create([
-            'phone' => $request->phone,
-            'relationship_to_child' => 'parent',
-        ]);
+        if ($role === 'parent') {
+            // Create guardian profile for parent
+            $user->guardian()->create([
+                'phone' => $request->phone ?? '',
+                'relationship_to_patient' => 'parent',
+            ]);
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -92,9 +94,29 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            // Catat upaya login gagal untuk mendeteksi serangan brute force
+            AuditLog::log(
+                action: 'FAILED_LOGIN_ATTEMPT',
+                entity: 'User',
+                entityId: $user?->id,
+                oldValues: null,
+                newValues: ['attempted_email' => $request->email]
+            );
+
             throw ValidationException::withMessages([
                 'email' => ['Kombinasi email dan kata sandi tidak cocok.'],
             ]);
+        }
+
+        // Catat login berhasil untuk akun berhak akses tinggi (admin / super_admin)
+        if (in_array($user->role, ['super_admin', 'admin'], true)) {
+            AuditLog::log(
+                action: 'ADMIN_LOGIN_SUCCESS',
+                entity: 'User',
+                entityId: $user->id,
+                oldValues: null,
+                newValues: ['email' => $user->email, 'role' => $user->role]
+            );
         }
 
         // Pengecekan status untuk role dokter
